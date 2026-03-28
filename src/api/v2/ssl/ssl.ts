@@ -189,6 +189,7 @@ export const downloadCertificate = async (
     const response = await axios.get(`${axiosInstance.defaults.baseURL}/ssl/download/${id}`, {
         params: { type },
         headers,
+        withCredentials: true,
         responseType: 'text',
     });
     return response.data;

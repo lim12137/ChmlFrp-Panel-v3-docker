@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { useProviderStore } from '../stores/provider';
 import { useUserStore } from '../stores/user';
+import api from '@/api';
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -182,7 +183,7 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/sign',
         name: '登录',
-        component: () => import('@/views/Sign/index.vue'),
+        component: () => import('@/views/SIgn/index.vue'),
         meta: {
             title: '登录 - ChmlFrp',
             keywords: 'ChmlFrp, 登录, 用户认证, 内网穿透, 端口映射, frp, 免费frp, 映射',
@@ -292,7 +293,7 @@ const router = createRouter({
     routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
     void from;
 
     useProviderStore().loadingBar?.start();
@@ -301,8 +302,13 @@ router.beforeEach((to, from, next) => {
     const isAuthenticated = !!userStore.userInfo; // 检查是否存在用户信息
 
     if (to.meta.requiresAuth && !isAuthenticated) {
-        // 如果路由需要认证且用户未登录
-        next({ path: '/sign' });
+        try {
+            const res = await api.v2.user.getUserInfo();
+            userStore.setUser(res.data);
+            next();
+        } catch {
+            next({ path: '/sign' });
+        }
     } else {
         next();
     }

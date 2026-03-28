@@ -99,6 +99,7 @@ export const createPayment = async (request: CreatePaymentRequest): Promise<Crea
 
         const response = await axios.post<CreatePaymentResponse>(`${PAYMENT_BASE_URL}/create`, formData, {
             headers,
+            withCredentials: true,
         });
 
         return response.data;
@@ -122,6 +123,7 @@ export const queryPayment = async (request: QueryPaymentRequest): Promise<QueryP
             params: {
                 outTradeNo: request.outTradeNo,
             },
+            withCredentials: true,
         });
 
         return response.data;
