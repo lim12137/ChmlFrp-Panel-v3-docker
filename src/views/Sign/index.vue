@@ -165,7 +165,6 @@ onMounted(async () => {
     background: radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, rgba(168, 85, 247, 0) 70%);
     animation: converge-purple 12s infinite;
 }
-
 .blob-orange {
     width: 45vw;
     height: 45vw;
