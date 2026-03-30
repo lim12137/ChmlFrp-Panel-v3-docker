@@ -66,14 +66,11 @@ import {
 } from 'naive-ui';
 import type { DataTableColumns, PaginationProps } from 'naive-ui';
 import api from '@/api';
-import { useUserStore } from '@/stores/user';
 import { useScreenStore } from '@/stores/useScreen';
 import { storeToRefs } from 'pinia';
 import type { LogItem } from '@/api/v2/user/user';
 
 const message = useMessage();
-const userStore = useUserStore();
-const userInfo = userStore.userInfo;
 
 // 获取屏幕宽度
 const screenStore = useScreenStore();
@@ -311,15 +308,9 @@ const formatDateTime = (timestamp: number): string => {
 
 // 获取日志数据
 const fetchLogs = async () => {
-    if (!userInfo?.usertoken) {
-        message.error('请先登录');
-        return;
-    }
-
     loading.value = true;
     try {
         const params: any = {
-            token: userInfo.usertoken,
             page: pagination.page || 1,
             size: pagination.pageSize || 10,
         };

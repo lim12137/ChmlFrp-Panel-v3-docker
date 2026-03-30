@@ -1,7 +1,6 @@
 import axiosInstance from '../axios/axiosInstance';
 import axios from 'axios';
 import { BaseResponse } from '../axios/axiosInstance';
-import { useUserStore } from '@/stores/user';
 
 // SSL证书提供商类型
 export type SSLProvider = 'letsencrypt' | 'zerossl' | 'google';
@@ -177,18 +176,9 @@ export const downloadCertificate = async (
     id: number,
     type: 'certificate' | 'privatekey' | 'chain' | 'full' = 'full'
 ): Promise<string> => {
-    // 对于文本响应，使用原生axios以避免响应拦截器的JSON解析
-    // 需要手动添加 Authorization header
-    const userStore = useUserStore();
-    const token = userStore.userInfo?.usertoken;
-    const headers: Record<string, string> = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await axios.get(`${axiosInstance.defaults.baseURL}/ssl/download/${id}`, {
         params: { type },
-        headers,
+        withCredentials: true,
         responseType: 'text',
     });
     return response.data;

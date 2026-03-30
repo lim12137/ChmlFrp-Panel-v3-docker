@@ -1,533 +1,352 @@
 <template>
-    <n-layout style="height: 100vh">
-        <n-layout-content>
-            <n-grid
-                cols="6"
-                item-responsive
-                responsive="screen"
-                :class="{ 'register-mode': isRegister, 'reset-mode': isReset, 'mobile-mode': isMobile }"
-            >
-                <n-grid-item span="0 m:4" class="center-content hero-container" :class="{ 'hero-right': isRegister }">
-                    <HeroSection
-                        :mode="mode"
-                        :is-register="isRegister"
-                        :is-mobile="isMobile"
-                        @toggle-register="handleToggleRegister"
-                        @to-login="handleToLogin"
-                    />
-                </n-grid-item>
-                <n-grid-item span="6 m:2" class="center-content form-container" :class="{ 'form-left': isRegister }">
-                    <n-card style="height: 100vh">
-                        <transition :name="formTransitionName" mode="out-in">
-                            <div :key="mode" class="center-form">
-                                <template v-if="mode === 'login'">
-                                    <template v-if="!isEmailCodeLoginMode">
-                                        <LoginForm
-                                            v-model:form-ref="formRef"
-                                            :model="loginModel"
-                                            :keep-logged-in="keepLoggedIn"
-                                            :loading="loginLoading"
-                                            :is-mobile="isMobile"
-                                            @update:model="loginModel = $event"
-                                            @update:keep-logged-in="keepLoggedIn = $event"
-                                            @submit="handleLoginSubmit"
-                                            @reset-password="toReset"
-                                            @tourist-panel="touristPanel"
-                                            @toggle-register="handleToggleRegister"
-                                        />
-                                    </template>
-                                    <template v-else>
-                                        <EmailCodeLoginForm
-                                            v-model:form-ref="emailCodeFormRef"
-                                            :model="emailCodeModel"
-                                            :loading="emailCodeLoginLoading"
-                                            :loading-captcha="geetest.loadingCaptcha"
-                                            :button-disabled="geetest.buttonDisabled"
-                                            :button-text="geetest.buttonText"
-                                            :ban-remaining-time="banCountdown.banRemainingTime"
-                                            :is-mobile="isMobile"
-                                            @update:model="emailCodeModel = $event"
-                                            @submit="handleEmailCodeLoginSubmit"
-                                            @send-code="handleSendCode('login', $event)"
-                                            @back-to-normal-login="backToNormalLogin"
-                                            @tourist-panel="touristPanel"
-                                        />
-                                    </template>
-                                </template>
-                                <template v-else-if="mode === 'register'">
-                                    <RegisterForm
-                                        v-model:form-ref="formRef"
-                                        :model="registerModel"
-                                        :clause="clause"
-                                        :current-step="register.currentStep"
-                                        :transition-name="register.transitionName"
-                                        :loading="register.RegLoading"
-                                        :loading-captcha="geetest.loadingCaptcha"
-                                        :button-disabled="geetest.buttonDisabled"
-                                        :button-text="geetest.buttonText"
-                                        :is-next-step-disabled="register.isNextStepDisabled"
-                                        :is-mobile="isMobile"
-                                        @update:model="registerModel = $event"
-                                        @update:clause="clause = $event"
-                                        @next-step="register.nextStep"
-                                        @prev-step="register.prevStep"
-                                        @send-code="handleSendCode('register', $event)"
-                                        @tourist-panel="touristPanel"
-                                        @toggle-register="handleToggleRegister"
-                                    />
-                                </template>
-                                <template v-else>
-                                    <ResetPasswordForm
-                                        v-model:form-ref="resetFormRef"
-                                        :model="resetModel"
-                                        :loading="resetPassword.loginLoading"
-                                        :loading-captcha="geetest.loadingCaptcha"
-                                        :button-disabled="geetest.buttonDisabled"
-                                        :button-text="geetest.buttonText"
-                                        @update:model="resetModel = $event"
-                                        @submit="handleResetPasswordSubmit"
-                                        @send-code="handleSendCode('reset_password', $event)"
-                                        @to-login="handleToLogin"
-                                    />
-                                </template>
-                            </div>
-                        </transition>
-                    </n-card>
-                </n-grid-item>
-            </n-grid>
-        </n-layout-content>
-    </n-layout>
+    <div class="auth-redirect-container">
+        <div class="aurora-bg">
+            <div class="aurora-blob blob-blue"></div>
+            <div class="aurora-blob blob-purple"></div>
+            <div class="aurora-blob blob-orange"></div>
+        </div>
+
+        <div class="auth-content" :class="{ 'fade-in': showCard }">
+            <div class="loader-wrapper" v-if="!hasSsoError">
+                <svg class="circular-loader" viewBox="25 25 50 50">
+                    <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="3" stroke-miterlimit="10" />
+                </svg>
+            </div>
+            
+            <div class="text-content">
+                <h1 class="auth-title">{{ titleText }}</h1>
+                <p class="auth-subtitle">{{ subtitleText }}</p>
+                <p class="auth-desc" v-if="hasSsoError">您已取消授权，点击下方按钮可重新发起登录。</p>
+            </div>
+            
+            <div class="auth-action" :class="{ 'show-action': showAction }">
+                <a :href="authorizeUrl" class="action-link">
+                    <span>{{ actionText }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, provide, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useMessage, useDialog, FormInst } from 'naive-ui';
-import { useUserStore } from '@/stores/user';
-import HeroSection from './components/HeroSection.vue';
-import LoginForm from './components/LoginForm.vue';
-import EmailCodeLoginForm from './components/EmailCodeLoginForm.vue';
-import RegisterForm from './components/RegisterForm.vue';
-import ResetPasswordForm from './components/ResetPasswordForm.vue';
-import { useGeetest } from './composables/useGeetest';
-import { useBanCountdown } from './composables/useBanCountdown';
-import { useModeSwitch } from './composables/useModeSwitch';
-import { useMobileDetection } from './composables/useMobileDetection';
-import { useLogin } from './composables/useLogin';
-import { useEmailCodeLogin } from './composables/useEmailCodeLogin';
-import { useRegister } from './composables/useRegister';
-import { useResetPassword } from './composables/useResetPassword';
-import type { LoginModel, EmailCodeLoginModel, RegisterModel, ResetPasswordModel } from './types';
-import { MESSAGES } from './constants';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import api from '@/api';
 
+const apiBaseUrl = 'http://localhost:8111';
+const returnUrl = 'http://localhost:5174/home';
+
+const authorizeUrl = computed(() => `${apiBaseUrl}/sso/authorize?return_url=${encodeURIComponent(returnUrl)}`);
+
+const route = useRoute();
 const router = useRouter();
-const message = useMessage();
-const dialog = useDialog();
-const userStore = useUserStore();
-const userInfo = userStore.userInfo;
 
-// 模式切换
-const { isRegister, isReset, mode, formTransitionName, toLogin, toReset, toggleRegister } = useModeSwitch();
+const showCard = ref(false);
+const showAction = ref(false);
+const ssoError = computed(() => String(route.query.sso_error || '').trim());
+const hasSsoError = computed(() => ssoError.value.length > 0);
+const titleText = computed(() => (hasSsoError.value ? '登录已取消' : '正在安全连接'));
+const subtitleText = computed(() => (hasSsoError.value ? ssoError.value : '请稍候'));
+const actionText = computed(() => (hasSsoError.value ? '重新登录' : '手动跳转'));
 
-// 移动端 & 触控检测
-const { isMobile } = useMobileDetection();
-const isTouchDevice = (() => {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-        return false;
-    }
-    return (
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        // @ts-expect-error 兼容旧版浏览器
-        navigator.msMaxTouchPoints > 0
-    );
-})();
-provide('isTouchDevice', isTouchDevice);
+onMounted(async () => {
+    setTimeout(() => {
+        showCard.value = true;
+    }, 100);
 
-// 极验验证码
-const geetest = useGeetest();
+    setTimeout(() => {
+        showAction.value = true;
+    }, 3000);
 
-// 封禁倒计时
-const banCountdown = useBanCountdown();
-
-// 表单引用
-const formRef = ref<FormInst | null>(null);
-const emailCodeFormRef = ref<FormInst | null>(null);
-const resetFormRef = ref<FormInst | null>(null);
-
-// 登录相关
-const loginModel = ref<LoginModel>({ email: null, password: null });
-const keepLoggedIn = ref(false);
-const isEmailCodeLoginMode = ref(false);
-const emailCodeModel = ref<EmailCodeLoginModel>({ email: '', code: '' });
-
-const handleBanned = (errorMessage: string) => {
-    const timeMatch = errorMessage.match(/剩余时间[：:]\s*([^，,]+)/);
-    if (timeMatch && timeMatch[1]) {
-        const timeStr = timeMatch[1].trim();
-        banCountdown.startBanCountdown(timeStr);
-    } else {
-        banCountdown.stopBanCountdown();
-    }
-
-    isEmailCodeLoginMode.value = true;
-    if (loginModel.value.email && loginModel.value.email.includes('@')) {
-        emailCodeModel.value.email = loginModel.value.email;
-    }
-};
-
-const { loginLoading, handleLogin } = useLogin(loginModel, keepLoggedIn, handleBanned);
-const { loginLoading: emailCodeLoginLoading, handleEmailCodeLogin } = useEmailCodeLogin(emailCodeModel, keepLoggedIn);
-
-// 注册相关
-const registerModel = ref<RegisterModel>({
-    username: '',
-    qq: '',
-    password: '',
-    email: '',
-    confirmPassword: '',
-    verificationCode: '',
-});
-const clause = ref(false);
-
-const register = useRegister(registerModel, clause, () => {
-    toggleRegister();
-    registerModel.value = {
-        username: '',
-        qq: '',
-        password: '',
-        email: '',
-        confirmPassword: '',
-        verificationCode: '',
-    };
-    clause.value = false;
-});
-
-// 重置密码相关
-const resetModel = ref<ResetPasswordModel>({
-    email: '',
-    verificationCode: '',
-    newPassword: '',
-    confirmPassword: '',
-});
-
-const resetPassword = useResetPassword(resetModel, () => {
-    handleToLogin();
-    resetModel.value = {
-        email: '',
-        verificationCode: '',
-        newPassword: '',
-        confirmPassword: '',
-    };
-});
-
-// 处理登录
-const handleLoginSubmit = () => {
-    handleLogin(formRef.value);
-};
-
-// 处理邮箱验证码登录
-const handleEmailCodeLoginSubmit = () => {
-    handleEmailCodeLogin(emailCodeFormRef.value);
-    if (emailCodeLoginLoading.value === false) {
-        isEmailCodeLoginMode.value = false;
-        emailCodeModel.value = { email: '', code: '' };
-        banCountdown.stopBanCountdown();
-    }
-};
-
-// 处理重置密码
-const handleResetPasswordSubmit = () => {
-    resetPassword.handleResetPassword();
-};
-
-// 处理发送验证码
-const handleSendCode = (type: string, email: string) => {
-    geetest.showGeetest(type, email);
-};
-
-// 返回普通登录
-const backToNormalLogin = () => {
-    isEmailCodeLoginMode.value = false;
-    emailCodeModel.value = { email: '', code: '' };
-    banCountdown.stopBanCountdown();
-};
-
-// 切换到登录
-const handleToLogin = () => {
-    toLogin();
-    isEmailCodeLoginMode.value = false;
-    emailCodeModel.value = { email: '', code: '' };
-    banCountdown.stopBanCountdown();
-};
-
-// 切换注册
-const handleToggleRegister = () => {
-    toggleRegister();
-    if (!isRegister.value) {
-        isEmailCodeLoginMode.value = false;
-        emailCodeModel.value = { email: '', code: '' };
-        banCountdown.stopBanCountdown();
-    }
-};
-
-// 游客面板
-const touristPanel = () => {
-    if (!userInfo?.usertoken) {
-        router.push('/tunnel/download');
-        message.warning(MESSAGES.TOURIST_PANEL_WARNING);
-    } else {
-        dialog.warning({
-            title: MESSAGES.TOURIST_PANEL_TITLE,
-            content: MESSAGES.TOURIST_PANEL_CONTENT,
-            positiveText: '是',
-            negativeText: '否',
-            onPositiveClick: () => {
-                router.push('/home');
-            },
-            onNegativeClick: () => {
-                userStore.clearUser();
-                router.push('/tunnel/download');
-                message.warning(MESSAGES.TOURIST_PANEL_WARNING);
-            },
-        });
-    }
-};
-
-const handleEnterKeydown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' || event.isComposing) {
+    if (hasSsoError.value) {
         return;
     }
 
-    const target = event.target as HTMLElement | null;
-    if (target?.tagName === 'TEXTAREA') {
+    try {
+        const res = await api.v2.user.getUserInfo();
+        if (res?.data) {
+            setTimeout(async () => {
+                await router.replace('/home');
+            }, 800);
+            return;
+        }
+    } catch {
+        void 0;
+    }
+
+    const now = Date.now();
+    const lastRedirectAt = Number(sessionStorage.getItem('sso_last_redirect_at') || 0);
+    if (now - lastRedirectAt < 2000) {
         return;
     }
-
-    const triggerLogin = () => {
-        if (loginLoading.value || !loginModel.value.email || !loginModel.value.password) {
-            return false;
-        }
-        handleLoginSubmit();
-        return true;
-    };
-
-    const triggerEmailCodeLogin = () => {
-        if (
-            emailCodeLoginLoading.value ||
-            !emailCodeModel.value.email ||
-            !emailCodeModel.value.code ||
-            geetest.loadingCaptcha.value === true
-        ) {
-            return false;
-        }
-        handleEmailCodeLoginSubmit();
-        return true;
-    };
-
-    const triggerRegister = () => {
-        if (register.isNextStepDisabled.value || register.RegLoading.value) {
-            return false;
-        }
-        register.nextStep();
-        return true;
-    };
-
-    const triggerResetPassword = () => {
-        if (
-            resetPassword.loginLoading.value ||
-            !resetModel.value.email ||
-            !resetModel.value.newPassword ||
-            !resetModel.value.confirmPassword ||
-            !resetModel.value.verificationCode
-        ) {
-            return false;
-        }
-        handleResetPasswordSubmit();
-        return true;
-    };
-
-    let handled = false;
-    if (mode.value === 'login') {
-        handled = isEmailCodeLoginMode.value ? triggerEmailCodeLogin() : triggerLogin();
-    } else if (mode.value === 'register') {
-        handled = triggerRegister();
-    } else if (isReset.value) {
-        handled = triggerResetPassword();
-    }
-
-    if (handled) {
-        event.preventDefault();
-    }
-};
-
-onMounted(() => {
-    window.addEventListener('keydown', handleEnterKeydown);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('keydown', handleEnterKeydown);
+    sessionStorage.setItem('sso_last_redirect_at', String(now));
+    
+    setTimeout(() => {
+        window.location.replace(authorizeUrl.value);
+    }, 800);
 });
 </script>
 
-<style lang="scss">
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+<style scoped>
+.auth-redirect-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111111;
+    z-index: 9999;
+    overflow: hidden;
 }
 
-.form-slide-enter-active,
-.form-slide-leave-active {
-    transition: all 0.5s ease;
-}
-
-.form-slide-enter-from {
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-.form-slide-enter-to {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.form-slide-leave-from {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.form-slide-leave-to {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-
-.slide-down-enter-active,
-.slide-down-leave-active {
-    transition: all 0.5s ease;
-}
-
-.slide-down-enter-from {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-
-.slide-down-enter-to {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.slide-down-leave-from {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.slide-down-leave-to {
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-.hero-container {
-    transition:
-        transform 0.75s cubic-bezier(0.25, 0.1, 0.25, 1),
-        text-align 0.75s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.hero-container.hero-right {
-    transform: translateX(50%);
-    text-align: right;
-}
-
-.form-container {
-    transition: transform 0.75s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.form-container.form-left {
-    transform: translateX(-200%);
-}
-
-@media (max-width: 1023.5px) {
-    .form-container.form-left {
-        transform: none;
+@media (prefers-color-scheme: dark) {
+    .auth-redirect-container {
+        background-color: #0a0a0a;
+        color: #f5f5f5;
     }
 }
 
-.center-content {
+.aurora-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    z-index: 1;
+    opacity: 0.8;
+    filter: blur(50px);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.center-form {
+@media (prefers-color-scheme: dark) {
+    .aurora-bg {
+        opacity: 0.6;
+        filter: blur(70px);
+    }
+}
+
+.aurora-blob {
+    position: absolute;
+    border-radius: 50%;
+    mix-blend-mode: normal;
+    /* Common animation base */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    animation-iteration-count: infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+    .aurora-blob {
+        mix-blend-mode: screen;
+    }
+}
+
+.blob-blue {
+    width: 45vw;
+    height: 45vw;
+    max-width: 500px;
+    max-height: 500px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, rgba(59, 130, 246, 0) 70%);
+    animation: converge-blue 12s infinite;
+}
+
+.blob-purple {
+    width: 45vw;
+    height: 45vw;
+    max-width: 500px;
+    max-height: 500px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, rgba(168, 85, 247, 0) 70%);
+    animation: converge-purple 12s infinite;
+}
+
+.blob-orange {
+    width: 45vw;
+    height: 45vw;
+    max-width: 500px;
+    max-height: 500px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.7) 0%, rgba(249, 115, 22, 0) 70%);
+    animation: converge-orange 12s infinite;
+}
+
+@keyframes converge-blue {
+    0% { transform: rotate(0deg) translateX(45vw) scale(1); }
+    40% { transform: rotate(144deg) translateX(5vw) scale(1.2); }
+    50% { transform: rotate(180deg) translateX(0%) scale(1.3); }
+    60% { transform: rotate(216deg) translateX(5vw) scale(1.2); }
+    100% { transform: rotate(360deg) translateX(45vw) scale(1); }
+}
+
+@keyframes converge-purple {
+    0% { transform: rotate(120deg) translateX(45vw) scale(1); }
+    40% { transform: rotate(264deg) translateX(5vw) scale(1.2); }
+    50% { transform: rotate(300deg) translateX(0%) scale(1.3); }
+    60% { transform: rotate(336deg) translateX(5vw) scale(1.2); }
+    100% { transform: rotate(480deg) translateX(45vw) scale(1); }
+}
+
+@keyframes converge-orange {
+    0% { transform: rotate(240deg) translateX(45vw) scale(1); }
+    40% { transform: rotate(384deg) translateX(5vw) scale(1.2); }
+    50% { transform: rotate(420deg) translateX(0%) scale(1.3); }
+    60% { transform: rotate(456deg) translateX(5vw) scale(1.2); }
+    100% { transform: rotate(600deg) translateX(45vw) scale(1); }
+}
+
+.auth-content {
+    position: relative;
+    z-index: 10;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
+    gap: 32px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .auth-content {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+}
+
+.auth-content.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.loader-wrapper {
+    width: 40px;
+    height: 40px;
+    position: relative;
+}
+
+.circular-loader {
+    animation: rotate 2s linear infinite;
     height: 100%;
+    width: 100%;
 }
 
-/* 手机端样式 */
-@media (max-width: 768px) {
-    .register-mode .hero-container {
-        order: 2;
-    }
+.loader-path {
+    stroke: rgba(17, 17, 17, 0.9);
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+    animation: dash 1.5s ease-in-out infinite;
+    stroke-linecap: round;
+}
 
-    .register-mode .form-container {
-        order: 1;
-    }
-
-    .n-grid.register-mode {
-        flex-direction: column-reverse;
-    }
-
-    .center-content {
-        flex: 1;
+@media (prefers-color-scheme: dark) {
+    .loader-path {
+        stroke: rgba(255, 255, 255, 0.9);
     }
 }
 
-.slide-left-enter-active,
-.slide-left-leave-active,
-.slide-right-enter-active,
-.slide-right-leave-active {
+@keyframes rotate {
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes dash {
+    0% { stroke-dasharray: 1, 200; stroke-dashoffset: 0; }
+    50% { stroke-dasharray: 89, 200; stroke-dashoffset: -35px; }
+    100% { stroke-dasharray: 89, 200; stroke-dashoffset: -124px; }
+}
+
+.text-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
+    color: rgba(17, 17, 17, 0.9);
+}
+
+.auth-subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(17, 17, 17, 0.6);
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+
+.auth-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(17, 17, 17, 0.75);
+    margin: 6px 0 0;
+    letter-spacing: 0.01em;
+}
+
+@media (prefers-color-scheme: dark) {
+    .auth-title {
+        color: rgba(255, 255, 255, 0.95);
+    }
+    .auth-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    .auth-desc {
+        color: rgba(255, 255, 255, 0.78);
+    }
+}
+
+.auth-action {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.6s ease;
+    margin-top: 16px;
+}
+
+.auth-action.show-action {
+    opacity: 1;
+    visibility: visible;
+}
+
+.action-link {
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(17, 17, 17, 0.5);
+    text-decoration: none;
+    padding: 8px 0;
+    background: transparent;
     transition: all 0.3s ease;
 }
 
-.slide-left-enter-from {
-    opacity: 0;
-    transform: translateX(20px);
+.action-link:hover {
+    color: rgba(17, 17, 17, 0.9);
 }
 
-.slide-left-enter-to {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.slide-left-leave-from {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.slide-left-leave-to {
-    opacity: 0;
-    transform: translateX(-20px);
-}
-
-.slide-right-enter-from {
-    opacity: 0;
-    transform: translateX(-20px);
-}
-
-.slide-right-enter-to {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.slide-right-leave-from {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.slide-right-leave-to {
-    opacity: 0;
-    transform: translateX(20px);
+@media (prefers-color-scheme: dark) {
+    .action-link {
+        color: rgba(255, 255, 255, 0.4);
+        background: transparent;
+    }
+    .action-link:hover {
+        color: rgba(255, 255, 255, 0.9);
+        background: transparent;
+    }
 }
 </style>

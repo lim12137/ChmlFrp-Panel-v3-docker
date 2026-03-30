@@ -54,10 +54,10 @@
         </n-h3>
         <n-grid cols="2 s:3 l:4 xl:5 2xl:6" :x-gap="12" :y-gap="12" responsive="screen">
             <n-grid-item>
-                <n-spin :show="loading">
+                <n-spin :show="loading.wxpay">
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-card size="small" hoverable @click="pay('wxpay')" :disabled="!isAmountValid">
+                            <n-card size="small" hoverable @click="pay('wxpay')" :disabled="!isAmountValid || loading.wxpay">
                                 <n-space align="center">
                                     <n-icon size="40" color="#07C160">
                                         <LogoWechat />
@@ -71,10 +71,10 @@
                 </n-spin>
             </n-grid-item>
             <n-grid-item>
-                <n-spin :show="loading">
+                <n-spin :show="loading.alipay">
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-card size="small" hoverable @click="pay('alipay')" :disabled="!isAmountValid">
+                            <n-card size="small" hoverable @click="pay('alipay')" :disabled="!isAmountValid || loading.alipay">
                                 <n-space align="center">
                                     <n-icon size="40" color="#1677FF">
                                         <LogoAlipay />
@@ -281,7 +281,7 @@ onMounted(() => {
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 
-const loading = ref(false);
+const loading = ref({ wxpay: false, alipay: false });
 
 // 预设金额配置
 const presetAmounts = [
@@ -368,7 +368,7 @@ const pay = async (ttype: 'wxpay' | 'alipay') => {
         return;
     }
 
-    loading.value = true;
+    loading.value[ttype] = true;
     try {
         // 创建支付订单
         const response = await api.payment.createPayment({
@@ -454,7 +454,7 @@ const pay = async (ttype: 'wxpay' | 'alipay') => {
         console.error('购买请求失败:', error);
         message.error(error.message || '购买请求异常，请检查网络或稍后再试');
     } finally {
-        loading.value = false;
+        loading.value[ttype] = false;
     }
 };
 </script>

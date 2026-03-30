@@ -9,6 +9,9 @@ export function useMembershipPricing(userInfo: { usergroup?: string; term?: stri
     const baseMonthlyCost = BASE_MONTHLY_COST;
 
     const getPrice = (group: MembershipType): number => {
+        if (group === '免费用户') {
+            return 0;
+        }
         return LIFETIME_MEMBER_PRICE[group] || 0;
     };
 

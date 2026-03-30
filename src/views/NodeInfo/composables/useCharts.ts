@@ -166,7 +166,7 @@ export function useCharts(
             },
             xAxis: {
                 data: CPUDateList,
-                textStyle: {
+                axisLabel: {
                     color: themeVars.value.textColorBase,
                 },
             },

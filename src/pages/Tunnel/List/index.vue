@@ -81,6 +81,7 @@
             <TunnelCardComponent
                 :card="card"
                 :deletet-tunnel-success="deletetTunnelSuccess"
+                :is-mobile="isHidden"
                 :on-edit="editTunnel"
                 :on-get-config="getConfigCode"
                 :on-refresh="handleRefreshTunnel"
@@ -88,6 +89,7 @@
                 :on-offline="handleOfflineTunnel"
                 :on-delete="handleConfirmDelete"
                 :on-copy-address="handleCopyAddress"
+                :on-start="handleStartTunnel"
             />
         </n-grid-item>
     </n-grid>
@@ -116,6 +118,7 @@ import { useMessage, useDialog } from 'naive-ui';
 import { useScreenStore } from '@/stores/useScreen';
 import { storeToRefs } from 'pinia';
 import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import api from '@/api';
 
@@ -149,9 +152,10 @@ const userInfo = userStore.userInfo;
 
 const message = useMessage();
 const dialog = useDialog();
+const router = useRouter();
 
 const screenStore = useScreenStore();
-const { screenWidth } = storeToRefs(screenStore);
+const { screenWidth, isHidden } = storeToRefs(screenStore);
 
 // 根据屏幕宽度决定对话框大小
 const widthStyle = computed(() => ({
@@ -247,6 +251,91 @@ const handleCopyAddress = (address: string) => {
     copyConfigToClipboard(address);
 };
 
+const handleStartTunnel = async (card: TunnelCard) => {
+    if (!userInfo?.usertoken) {
+        message.error('用户信息获取失败，请重新登录');
+        return;
+    }
+    const loadingMessage = message.loading('正在检测ChmlFrpLauncher客户端...', {
+        duration: 0,
+    });
+    const deepLink = `chmlfrp://${userInfo.usertoken}/start/${card.id}`;
+    const isClientInstalled = await checkClientInstalled(deepLink);
+    loadingMessage.destroy();
+    if (!isClientInstalled) {
+        dialog.warning({
+            title: '警告',
+            content: '未检测到客户端，此功能需要ChmlFrpLauncher支持，是否跳转到下载页面？',
+            positiveText: '确定',
+            negativeText: '取消',
+            draggable: true,
+            onPositiveClick: () => {
+                router.push('/tunnel/download');
+            }
+        });
+    } else {
+        window.location.href = deepLink;
+        message.success('正在启动隧道...');
+    }
+};
+
+const checkClientInstalled = (deepLink: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+        const initialHidden = document.hidden;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        let blurTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const handleVisibilityChange = () => {
+            if (document.hidden && !initialHidden) {
+                cleanup();
+                resolve(true);
+            }
+        };
+
+        const handleBlur = () => {
+            blurTimer = setTimeout(() => {
+                if (document.hidden) {
+                    cleanup();
+                    resolve(true);
+                }
+            }, 100);
+        };
+
+        const cleanup = () => {
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+            if (blurTimer) {
+                clearTimeout(blurTimer);
+                blurTimer = null;
+            }
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+
+        // 尝试打开 deep link
+        const link = document.createElement('a');
+        link.href = deepLink;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        timer = setTimeout(() => {
+            cleanup();
+            if (!document.hidden) {
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        }, 5000);
+    });
+};
+
 const handleCopyConfig = (text: string) => {
     copyConfigToClipboard(text);
 };
@@ -309,10 +398,8 @@ const editTunnel = async (card: TunnelCard) => {
 
     // 判断 card.dorp 是否为数字类型的字符串
     if (!isNaN(Number(card.dorp))) {
-        // 如果是数字字符串，转换为字符串并赋值给 formData.dorp
         formData.dorp = String(card.dorp);
     } else {
-        // 否则将其赋值给 formData.domain
         formData.domain = card.dorp;
     }
 

@@ -12,33 +12,6 @@
         <!-- 左侧 LOGO -->
         <span class="logo" :style="{ color: themeStore.primaryColor }" v-if="!isHidden"> ChmlFrp </span>
         <div class="right-section">
-            <!-- <n-popover trigger="click" style="border-radius: 8px; max-height: 60vh; width: 350px">
-                <template #trigger>
-                    <n-button quaternary style="position: relative">
-                        <n-icon :component="NotificationsOutline" style="font-size: 18px; cursor: pointer">
-                            <n-badge v-if="unreadCount" :value="unreadCount" type="error" :max="99" />
-                        </n-icon>
-                    </n-button>
-                </template>
-
-<n-spin :show="loading">
-    <n-list v-if="notifications.length">
-        <n-list-item v-for="notice in notifications" :key="notice.id">
-            <n-thing content-indented>
-                <template #header>
-                                    <n-time :time="new Date(notice.time)" type="relative" />
-                                </template>
-                <template #description>
-                                    <n-text depth="3">{{ formatMessageTime(notice.time) }}</n-text>
-                                </template>
-                <n-text>{{ notice.content }}</n-text>
-            </n-thing>
-        </n-list-item>
-    </n-list>
-
-    <n-empty v-else size="large" description="暂时没有新消息" style="margin: 20px 0" />
-</n-spin>
-</n-popover> -->
             <n-popover trigger="hover" style="border-radius: 8px">
                 <template #trigger>
                     <n-button quaternary style="font-size: 18px" @click="ThemeSwitcherDrawer('right')">
@@ -47,7 +20,7 @@
                 </template>
                 <span>面板设置</span>
             </n-popover>
-            <n-dropdown trigger="click" :options="userDropdownOptions">
+            <n-dropdown trigger="hover" :options="userDropdownOptions">
                 <n-button quaternary size="large">
                     <n-avatar
                         v-if="userInfo?.userimg"
@@ -91,47 +64,9 @@ import {
 } from '@vicons/ionicons5';
 // 获取登录信息
 import { useUserStore } from '@/stores/user';
-// import dayjs from 'dayjs'
-
-// import api from '@/api'
-
+import axiosInstance from '@/api/v2/axios/axiosInstance';
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
-
-// 通知数据结构
-// interface Notification {
-//     id: number
-//     userid: number
-//     content: string
-//     quanti: string
-//     time: string
-// }
-
-// 响应式数据
-// const notifications = ref<Notification[]>([])
-// const loading = ref(true)
-// const unreadCount = ref(0)
-
-// 格式化时间显示
-// const formatMessageTime = (isoTime: string) => {
-//     return dayjs(isoTime).format('YYYY-MM-DD HH:mm')
-// }
-
-// 获取通知数据
-// const fetchNotifications = async () => {
-//     try {
-//         const response = await api.v2.user.getMessages(userInfo?.usertoken || '')
-
-//         notifications.value = response.data || []
-//         // 根据quanti字段计算未读数（根据实际业务需求调整）
-//         unreadCount.value = notifications.value.filter((n: { quanti: string; }) => n.quanti === 'yes').length
-
-//     } catch (e) {
-//         message.error('获取通知失败: ' + (e as Error).message)
-//     } finally {
-//         loading.value = false
-//     }
-// }
 
 // UserDropdown图标函数
 const renderIcon = (icon: Component, color?: string) => {
@@ -181,6 +116,18 @@ const ThemeSwitcherDrawer = (place: DrawerPlacement) => {
 
 const userDropdownOptions = ref<DropdownOption[]>([]);
 
+const handleLogout = async () => {
+    try {
+        await axiosInstance.post('/sso/logout');
+    } catch {
+        void 0;
+    } finally {
+        userStore.clearUser();
+        sessionStorage.removeItem('sso_last_redirect_at');
+        window.location.replace('https://www.chmlfrp.net');
+    }
+};
+
 const updateUserDropdownOptions = () => {
     if (userInfo) {
         userDropdownOptions.value = [
@@ -205,9 +152,7 @@ const updateUserDropdownOptions = () => {
                 icon: renderIcon(LogoutIcon, '#f5222d'),
                 props: {
                     onClick: () => {
-                        userStore.clearUser();
-                        message.success('成功退出登陆，用户信息已清空');
-                        router.push('/sign');
+                        void handleLogout();
                     },
                 },
             },

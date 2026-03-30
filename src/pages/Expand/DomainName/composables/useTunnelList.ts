@@ -6,7 +6,7 @@ import type { TunnelOption, SelectedTunnelInfo } from '../types';
 /**
  * 隧道列表管理 composable（用于快速解析）
  */
-export function useTunnelList(userInfo: { usertoken?: string } | undefined) {
+export function useTunnelList(_userInfo: { usertoken?: string } | undefined) {
     const message = useMessage();
     const loading = ref(false);
     const tunnelOptions = ref<TunnelOption[]>([]);
