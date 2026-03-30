@@ -33,8 +33,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/api';
 
-const apiBaseUrl = 'http://localhost:8111';
-const returnUrl = 'http://localhost:5174/home';
+const apiBaseUrl = 'https://cf-v2.uapis.cn';
+const returnUrl = 'https://panel.chmlfrp.net/home';
 
 const authorizeUrl = computed(() => `${apiBaseUrl}/sso/authorize?return_url=${encodeURIComponent(returnUrl)}`);
 
