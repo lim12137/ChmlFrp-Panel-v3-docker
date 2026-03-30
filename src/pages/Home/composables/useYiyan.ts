@@ -1,12 +1,10 @@
 import { ref } from 'vue';
 import axios from 'axios';
-import { useMessage } from 'naive-ui';
 
 /**
  * 一言 composable
  */
 export function useYiyan() {
-    const message = useMessage();
     const apiText = ref('');
     const loading = ref(true);
 

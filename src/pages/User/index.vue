@@ -3,19 +3,23 @@
     <n-flex vertical>
         <n-grid cols="1 s:5" responsive="screen" :x-gap="15" :y-gap="20">
             <n-gi :span="3">
-                <n-card style="margin-bottom: 15px" v-if="userInfo?.realname === '未实名'">
-                    <n-alert title="提示" type="warning">
+                <n-card style="margin-bottom: 15px">
+                    <n-alert
+                        title="提示"
+                        type="warning"
+                        v-if="userInfo?.realname === '未实名'"
+                        style="margin-bottom: 8px; cursor: pointer"
+                        @click="openRealnameConsole"
+                    >
                         您尚未实名，请前往轻爪账户控制台完成实名认证。根据中国法律规定，未实名将无法使用ChmlFrp提供的服务。
                         <template #action>
-                            <n-button text type="warning" @click="openRealnameConsole">前往实名</n-button>
+                            <n-button text type="warning" @click.stop="openRealnameConsole">前往实名</n-button>
                         </template>
                     </n-alert>
-                </n-card>
-                <n-card style="margin-bottom: 15px">
-                    <n-alert type="info" title="提示">
+                    <n-alert type="info" title="提示" style="cursor: pointer" @click="openAccountConsole">
                         如果要更改账户信息，请前往轻爪账户控制台
                         <template #action>
-                            <n-button text type="primary" @click="openAccountConsole">前往控制台</n-button>
+                            <n-button text type="primary" @click.stop="openAccountConsole">前往控制台</n-button>
                         </template>
                     </n-alert>
                 </n-card>

@@ -6,7 +6,7 @@ import type { NodeInfo } from '../types';
 /**
  * 节点信息 composable
  */
-export function useNodeInfo(userInfo: { usertoken?: string }) {
+export function useNodeInfo(_userInfo: { usertoken?: string }) {
     const message = useMessage();
     const loading = ref(false);
     const nodeInfo = ref<NodeInfo>({

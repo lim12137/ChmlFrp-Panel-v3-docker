@@ -1,13 +1,12 @@
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useMessage } from 'naive-ui';
 import api from '@/api';
 import type { TunnelCard, Status } from '../types';
-import { STATUS_MAP } from '../constants';
 
 /**
  * 隧道列表 composable
  */
-export function useTunnelList(userInfo: { usertoken?: string }) {
+export function useTunnelList(_userInfo: { usertoken?: string }) {
     const message = useMessage();
     const loading = ref(true);
     const tunnelCards = ref<TunnelCard[] | null>(null);
