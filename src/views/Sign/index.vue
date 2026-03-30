@@ -7,23 +7,21 @@
         </div>
 
         <div class="auth-content" :class="{ 'fade-in': showCard }">
-            <div class="loader-wrapper">
+            <div class="loader-wrapper" v-if="!hasSsoError">
                 <svg class="circular-loader" viewBox="25 25 50 50">
                     <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="3" stroke-miterlimit="10" />
                 </svg>
             </div>
             
             <div class="text-content">
-                <h1 class="auth-title">正在安全连接</h1>
-                <p class="auth-subtitle">请稍候</p>
+                <h1 class="auth-title">{{ titleText }}</h1>
+                <p class="auth-subtitle">{{ subtitleText }}</p>
+                <p class="auth-desc" v-if="hasSsoError">您已取消授权，点击下方按钮可重新发起登录。</p>
             </div>
             
             <div class="auth-action" :class="{ 'show-action': showAction }">
                 <a :href="authorizeUrl" class="action-link">
-                    <span>手动跳转</span>
-                    <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <span>{{ actionText }}</span>
                 </a>
             </div>
         </div>
@@ -32,7 +30,7 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import api from '@/api';
 
 const apiBaseUrl = 'http://localhost:8111';
@@ -40,10 +38,16 @@ const returnUrl = 'http://localhost:5174/home';
 
 const authorizeUrl = computed(() => `${apiBaseUrl}/sso/authorize?return_url=${encodeURIComponent(returnUrl)}`);
 
+const route = useRoute();
 const router = useRouter();
 
 const showCard = ref(false);
 const showAction = ref(false);
+const ssoError = computed(() => String(route.query.sso_error || '').trim());
+const hasSsoError = computed(() => ssoError.value.length > 0);
+const titleText = computed(() => (hasSsoError.value ? '登录已取消' : '正在安全连接'));
+const subtitleText = computed(() => (hasSsoError.value ? ssoError.value : '请稍候'));
+const actionText = computed(() => (hasSsoError.value ? '重新登录' : '手动跳转'));
 
 onMounted(async () => {
     setTimeout(() => {
@@ -53,6 +57,10 @@ onMounted(async () => {
     setTimeout(() => {
         showAction.value = true;
     }, 3000);
+
+    if (hasSsoError.value) {
+        return;
+    }
 
     try {
         const res = await api.v2.user.getUserInfo();
@@ -283,12 +291,23 @@ onMounted(async () => {
     letter-spacing: 0.01em;
 }
 
+.auth-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(17, 17, 17, 0.75);
+    margin: 6px 0 0;
+    letter-spacing: 0.01em;
+}
+
 @media (prefers-color-scheme: dark) {
     .auth-title {
         color: rgba(255, 255, 255, 0.95);
     }
     .auth-subtitle {
         color: rgba(255, 255, 255, 0.6);
+    }
+    .auth-desc {
+        color: rgba(255, 255, 255, 0.78);
     }
 }
 
@@ -307,7 +326,6 @@ onMounted(async () => {
 .action-link {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     font-size: 13px;
     font-weight: 500;
     color: rgba(17, 17, 17, 0.5);
@@ -330,15 +348,5 @@ onMounted(async () => {
         color: rgba(255, 255, 255, 0.9);
         background: transparent;
     }
-}
-
-.arrow-icon {
-    width: 14px;
-    height: 14px;
-    transition: transform 0.2s ease;
-}
-
-.action-link:hover .arrow-icon {
-    transform: translateX(2px);
 }
 </style>

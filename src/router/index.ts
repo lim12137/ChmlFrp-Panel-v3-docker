@@ -298,6 +298,15 @@ router.beforeEach(async (to, from, next) => {
 
     useProviderStore().loadingBar?.start();
 
+    const ssoError = to.query.sso_error;
+    if (to.path !== '/sign' && typeof ssoError === 'string' && ssoError.trim().length > 0) {
+        next({
+            path: '/sign',
+            query: { sso_error: ssoError },
+        });
+        return;
+    }
+
     const userStore = useUserStore();
     const isAuthenticated = !!userStore.userInfo; // 检查是否存在用户信息
 
