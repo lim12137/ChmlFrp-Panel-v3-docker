@@ -1,6 +1,5 @@
 import axios from 'axios';
 import axiosInstance from '../axios/axiosInstance';
-import { useUserStore } from '@/stores/user';
 const PAYMENT_BASE_URL = axiosInstance.defaults.baseURL + '/api/payment';
 
 /**
@@ -87,18 +86,10 @@ export const createPayment = async (request: CreatePaymentRequest): Promise<Crea
             formData.append('type', request.type);
         }
 
-        // 需要手动添加 Authorization header
-        const userStore = useUserStore();
-        const token = userStore.userInfo?.usertoken;
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        };
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
         const response = await axios.post<CreatePaymentResponse>(`${PAYMENT_BASE_URL}/create`, formData, {
-            headers,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
             withCredentials: true,
         });
 

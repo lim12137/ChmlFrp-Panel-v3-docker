@@ -5,7 +5,18 @@
             <n-gi :span="3">
                 <n-card style="margin-bottom: 15px" v-if="userInfo?.realname === '未实名'">
                     <n-alert title="提示" type="warning">
-                        您尚未实名，请在右侧（或下方）实名认证窗口进行实名认证，我们允许14岁以上人群实名。<br />根据中国法律规定，未实名将无法使用ChmlFrp提供的服务。
+                        您尚未实名，请前往轻爪账户控制台完成实名认证。根据中国法律规定，未实名将无法使用ChmlFrp提供的服务。
+                        <template #action>
+                            <n-button text type="warning" @click="openRealnameConsole">前往实名</n-button>
+                        </template>
+                    </n-alert>
+                </n-card>
+                <n-card style="margin-bottom: 15px">
+                    <n-alert type="info" title="提示">
+                        如果要更改账户信息，请前往轻爪账户控制台
+                        <template #action>
+                            <n-button text type="primary" @click="openAccountConsole">前往控制台</n-button>
+                        </template>
                     </n-alert>
                 </n-card>
                 <SystemMessagesCard />
@@ -46,12 +57,6 @@
                 </UserSettingsCard>
             </n-gi>
             <n-gi :span="2">
-                <RealNameForm
-                    :loading="loadingRealName"
-                    :model="realNameModel"
-                    :user-info="userInfo ? { realname: userInfo.realname } : undefined"
-                    :on-submit="submitRealName"
-                />
                 <ExchangeCodeForm
                     :loading="loadingGiftCode"
                     :model="exchangeCodeModel"
@@ -85,63 +90,6 @@
             </n-gi>
         </n-grid>
     </n-flex>
-    <ChangeUsernameModal
-        v-model:show="changeTheUsernameModal"
-        :loading="loadingUpdateUserName"
-        :model="userNameModel"
-        :on-submit="handleResetUserName"
-    />
-    <ChangeAvatarModal
-        v-model:show="modifyAvatarModal"
-        :loading="loadingUpdateImg"
-        :model="userImageModel"
-        :qq-img="QQImg"
-        :cravatar-img="CravatarImg"
-        :qq="userInfo?.qq"
-        :email="userInfo?.email"
-        :on-submit="handleResetUserImg"
-        :on-set-q-q-avatar="handleSetQQAvatar"
-        :on-set-cravatar-avatar="handleSetCravatarAvatar"
-    />
-    <ChangePasswordModal
-        v-model:show="changePasswordModal"
-        :loading="loadingUpdatePassword"
-        :model="resetPasswordValue"
-        :on-submit="resetPassword"
-    />
-    <ChangeEmailModal
-        v-model:show="changeTheMailboxModal"
-        v-model:old-code="oldCode"
-        v-model:new-email="newEmail"
-        v-model:new-code="newCode"
-        :loading="loadingResetEmail"
-        :old-button-text="oldButtonText"
-        :new-button-text="newButtonText"
-        :old-button-disabled="oldButtonDisabled"
-        :new-button-disabled="newButtonDisabled"
-        :old-loading-captcha="oldLoadingCaptcha"
-        :new-loading-captcha="newLoadingCaptcha"
-        :on-gee-test="handleGeeTest"
-        :on-submit="handleResetEmail"
-    />
-    <ChangeQQModal
-        v-model:show="changeQQModal"
-        :loading="loadingUpdateQQ"
-        :model="qqModel"
-        :on-submit="handleResetQQ"
-    />
-    <DeleteAccountModal
-        v-model:show="deleteAccountVerificationModal"
-        v-model:code="deleteAccountCode"
-        :loading="deleteAccountLoading"
-        :loading-captcha="deleteAccountLoadingCaptcha"
-        :button-disabled="deleteAccountButtonDisabled"
-        :button-text="deleteAccountButtonText"
-        :on-gee-test="handleDeleteAccountGeeTest"
-        :on-back="showDeleteAccountTips"
-        :on-submit="showFinalWarning"
-    />
-
     <!-- 模糊遮罩 -->
     <div
         v-show="showBlurOverlay"
@@ -159,33 +107,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useLoadUserInfo } from '@/components/useLoadUser';
 
 // Composables
 import { useSignIn } from './composables/useSignIn';
-import { useRealName } from './composables/useRealName';
 import { useExchangeCode } from './composables/useExchangeCode';
 import { useGiftcardHistory } from './composables/useGiftcardHistory';
-import { useEmailVerification } from './composables/useEmailVerification';
-import { useAccountDeletion } from './composables/useAccountDeletion';
 import { useUserSettings, createSettingsCards } from './composables/useUserSettings';
-import { useUserProfile } from './composables/useUserProfile';
-import { useUserUpdates } from './composables/useUserUpdates';
 
 // Components
 import SystemMessagesCard from './components/SystemMessagesCard.vue';
 import UserSettingsCard from './components/UserSettingsCard.vue';
 import UserProfileCard from './components/UserProfileCard.vue';
-import RealNameForm from './components/RealNameForm.vue';
 import ExchangeCodeForm from './components/ExchangeCodeForm.vue';
-import ChangeUsernameModal from './components/ChangeUsernameModal.vue';
-import ChangeAvatarModal from './components/ChangeAvatarModal.vue';
-import ChangePasswordModal from './components/ChangePasswordModal.vue';
-import ChangeEmailModal from './components/ChangeEmailModal.vue';
-import ChangeQQModal from './components/ChangeQQModal.vue';
-import DeleteAccountModal from './components/DeleteAccountModal.vue';
 
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
@@ -202,8 +138,6 @@ const {
     onSignButtonClick,
 } = useSignIn(userInfo || {});
 
-const { loading: loadingRealName, model: realNameModel, submit: submitRealName } = useRealName(userInfo || {});
-
 const {
     loading: loadingGiftCode,
     model: exchangeCodeModel,
@@ -212,140 +146,24 @@ const {
 
 const { loading: loadingGiftcardHistory, historyData, loadHistory } = useGiftcardHistory(userInfo || {});
 
-const {
-    oldButtonText,
-    newButtonText,
-    oldButtonDisabled,
-    newButtonDisabled,
-    oldLoadingCaptcha,
-    newLoadingCaptcha,
-    oldCode,
-    newCode,
-    handleGeeTest: handleEmailGeeTest,
-} = useEmailVerification();
-
-const {
-    showModal: deleteAccountVerificationModal,
-    loading: deleteAccountLoading,
-    loadingCaptcha: deleteAccountLoadingCaptcha,
-    buttonDisabled: deleteAccountButtonDisabled,
-    buttonText: deleteAccountButtonText,
-    code: deleteAccountCode,
-    showDeleteAccountTips,
-    showFinalWarning,
-    handleGeeTest: handleDeleteAccountGeeTest,
-} = useAccountDeletion(userInfo || {});
-const newEmail = ref('');
-
 // User Settings & Updates
-const { loadingOfflineAllTunnels, resetToken, offlineAllTunnels } = useUserSettings(userInfo || {});
-const { QQImg, CravatarImg } = useUserProfile(userInfo ? { qq: userInfo.qq, email: userInfo.email } : undefined);
-const {
-    loadingUpdateImg,
-    loadingUpdateUserName,
-    loadingUpdateQQ,
-    loadingUpdatePassword,
-    loadingResetEmail,
-    userNameModel,
-    qqModel,
-    userImageModel,
-    resetPasswordValue,
-    resetUserImg,
-    resetUserName,
-    resetQQ,
-    resetPassword,
-    resetEmail: resetEmailAPI,
-} = useUserUpdates();
+const { resetToken, offlineAllTunnels, openAccountConsole } = useUserSettings();
 
-const changeTheUsernameModal = ref(false);
-const modifyAvatarModal = ref(false);
-const changePasswordModal = ref(false);
-const changeTheMailboxModal = ref(false);
-const changeQQModal = ref(false);
+const openRealnameConsole = () => {
+    window.location.href = 'https://account.qzhua.net/console?tab=realname';
+};
 
 onMounted(() => {
     fetchSignInInfo();
     useLoadUserInfo();
 });
 
-const handleResetUserImg = async () => {
-    const success = await resetUserImg();
-    if (success) {
-        modifyAvatarModal.value = false;
-    }
-};
-
-const handleResetUserName = async () => {
-    const success = await resetUserName();
-    if (success) {
-        changeTheUsernameModal.value = false;
-    }
-};
-
-const handleResetQQ = async () => {
-    const success = await resetQQ();
-    if (success) {
-        changeQQModal.value = false;
-    }
-};
-
-const handleResetEmail = () => {
-    resetEmailAPI(newEmail.value, oldCode.value, newCode.value);
-    changeTheMailboxModal.value = false;
-};
-
-const handleSetQQAvatar = () => {
-    userImageModel.newUserImage = QQImg.value;
-    handleResetUserImg();
-};
-
-const handleSetCravatarAvatar = () => {
-    userImageModel.newUserImage = CravatarImg.value;
-    handleResetUserImg();
-};
-
-const handleGeeTest = async (type: 'old' | 'new') => {
-    const email = type === 'old' ? userInfo?.email || '' : newEmail.value;
-    handleEmailGeeTest(type, email);
-};
-
-watch(newEmail, (newVal) => {
-    newButtonDisabled.value = !newVal;
-});
-
-const openChangeTheUsernameModal = () => {
-    changeTheUsernameModal.value = true;
-};
-
-const openModifyAvatarModal = () => {
-    modifyAvatarModal.value = true;
-};
-
-const openChangePasswordModal = () => {
-    changePasswordModal.value = true;
-};
-
-const openChangeTheMailboxModal = () => {
-    changeTheMailboxModal.value = true;
-};
-
-const openChangeQQModal = () => {
-    changeQQModal.value = true;
-};
-
 const settingCard = computed(() =>
     createSettingsCards(
         {
             resetToken,
-            openChangeUsername: openChangeTheUsernameModal,
-            openModifyAvatar: openModifyAvatarModal,
-            openChangePassword: openChangePasswordModal,
-            openChangeEmail: openChangeTheMailboxModal,
-            openChangeQQ: openChangeQQModal,
             offlineAllTunnels,
-            showDeleteAccountTips,
-        },
-        loadingOfflineAllTunnels.value
+        }
     )
 );
 </script>

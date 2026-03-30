@@ -31,44 +31,9 @@ const axiosInstance = axios.create({
     },
 });
 
-// 公开的 API 路径列表（不需要认证）
-const publicApiPaths = [
-    '/login',
-    '/register',
-    '/login_by_email_code',
-    '/sendmailcode',
-    '/email_reset_password',
-    '/node',
-    '/list_available_domains',
-    '/panelinfo',
-    '/api/server-status',
-    '/node_stats',
-];
-
 // 请求拦截器
 axiosInstance.interceptors.request.use(
-    (config) => {
-        // 检查是否为公开 API
-        const url = config.url || '';
-        const isPublicApi = publicApiPaths.some((path) => {
-            if (url === path) return true;
-            if (url.startsWith(path + '/') || url.startsWith(path + '?')) return true;
-            return false;
-        });
-
-        // 如果不是公开 API，则添加 Authorization Bearer token
-        if (!isPublicApi) {
-            const userStore = useUserStore();
-            const token = userStore.userInfo?.usertoken;
-
-            if (token) {
-                config.headers = config.headers || {};
-                config.headers['Authorization'] = `Bearer ${token}`;
-            }
-        }
-
-        return config;
-    },
+    (config) => config,
     (error) => {
         return Promise.reject(new ApiError('network', '向API发送请求失败', error));
     }
@@ -84,12 +49,19 @@ const handleInvalidToken = () => {
     }
 };
 
+const isInvalidLoginState = (data: any) => {
+    return (
+        data?.msg === '缺少登录态' ||
+        (data?.msg === '无效的登录状态' && data?.state === 'fail')
+    );
+};
+
 // 响应拦截器
 axiosInstance.interceptors.response.use(
     (response) => {
         const data = response.data;
 
-        if (data?.msg === '无效的Token') {
+        if (isInvalidLoginState(data)) {
             handleInvalidToken();
             throw new ApiError('response', data.msg, data);
         }
@@ -107,7 +79,7 @@ axiosInstance.interceptors.response.use(
             return Promise.reject(new ApiError('network', '连接到API网络失败，请稍候再试', error));
         }
 
-        if (error.response.data?.msg === '无效的Token') {
+        if (isInvalidLoginState(error.response.data)) {
             handleInvalidToken();
         }
 

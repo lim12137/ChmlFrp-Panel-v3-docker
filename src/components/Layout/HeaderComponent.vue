@@ -118,7 +118,7 @@ const userDropdownOptions = ref<DropdownOption[]>([]);
 
 const handleLogout = async () => {
     try {
-        await axiosInstance.get('/sso/logout');
+        await axiosInstance.post('/sso/logout');
     } catch {
         void 0;
     } finally {
