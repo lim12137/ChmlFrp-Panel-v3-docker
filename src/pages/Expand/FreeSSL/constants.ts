@@ -3,7 +3,7 @@
  */
 
 import type { ProviderOption, ChallengeTypeOption, StatusOption } from './types';
-import type { SSLProvider, ChallengeType, CertificateStatus } from '@/api/v2/ssl/ssl';
+import type { SSLProvider, CertificateStatus } from '@/api/v2/ssl/ssl';
 
 // SSL提供商选项
 export const PROVIDER_OPTIONS: ProviderOption[] = [

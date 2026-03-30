@@ -7,7 +7,7 @@ import { DEFAULT_TTL, MINECRAFT_SRV_CONFIG, INFO_MESSAGES, REMARKS } from '../co
 /**
  * 创建域名 composable
  */
-export function useDomainCreate(userInfo: { usertoken?: string } | undefined, onSuccess: () => void) {
+export function useDomainCreate(_userInfo: { usertoken?: string } | undefined, onSuccess: () => void) {
     const message = useMessage();
     const dialog = useDialog();
     const loading = ref(false);
@@ -51,7 +51,7 @@ export function useDomainCreate(userInfo: { usertoken?: string } | undefined, on
         loading.value = true;
         let record = formData.recordValue;
         let target = tunnelInfo.ip;
-        let type = formData.selectedRecordType;
+        let type: string = formData.selectedRecordType;
 
         if (formData.selectedRecordType === 'Java版MC') {
             type = 'SRV';

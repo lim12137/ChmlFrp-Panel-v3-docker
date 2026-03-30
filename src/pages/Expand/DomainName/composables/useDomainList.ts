@@ -6,7 +6,7 @@ import type { FreeDomain } from '../types';
 /**
  * 域名列表管理 composable
  */
-export function useDomainList(userInfo: { usertoken?: string } | undefined) {
+export function useDomainList(_userInfo: { usertoken?: string } | undefined) {
     const message = useMessage();
     const loading = ref(false);
     const domainData = ref<FreeDomain[]>([]);
