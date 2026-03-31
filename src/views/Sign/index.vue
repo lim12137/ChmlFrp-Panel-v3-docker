@@ -16,11 +16,12 @@
             <div class="text-content">
                 <h1 class="auth-title">{{ titleText }}</h1>
                 <p class="auth-subtitle">{{ subtitleText }}</p>
-                <p class="auth-desc" v-if="hasSsoError">您已取消授权，点击下方按钮可重新发起登录。</p>
+                <p class="auth-desc" v-if="hasSsoError">授权流程未完成，点击下方按钮可重新发起登录。</p>
+                <p class="auth-desc" v-else-if="loopDetected">当前浏览器未能建立登录会话，请点击下方按钮重试；若仍失败，请切换系统浏览器或关闭隐私限制后再试。</p>
             </div>
             
             <div class="auth-action" :class="{ 'show-action': showAction }">
-                <a :href="authorizeUrl" class="action-link">
+                <a :href="authorizeUrl" class="action-link" @click="handleManualAuthorize">
                     <span>{{ actionText }}</span>
                 </a>
             </div>
@@ -43,11 +44,51 @@ const router = useRouter();
 
 const showCard = ref(false);
 const showAction = ref(false);
+const loopDetected = ref(false);
 const ssoError = computed(() => String(route.query.sso_error || '').trim());
 const hasSsoError = computed(() => ssoError.value.length > 0);
-const titleText = computed(() => (hasSsoError.value ? '登录已取消' : '正在安全连接'));
-const subtitleText = computed(() => (hasSsoError.value ? ssoError.value : '请稍候'));
-const actionText = computed(() => (hasSsoError.value ? '重新登录' : '手动跳转'));
+const titleText = computed(() => {
+    if (hasSsoError.value) {
+        return '登录未完成';
+    }
+    if (loopDetected.value) {
+        return '登录会话未建立';
+    }
+    return '正在安全连接';
+});
+const subtitleText = computed(() => {
+    if (hasSsoError.value) {
+        return ssoError.value;
+    }
+    if (loopDetected.value) {
+        return '检测到浏览器没有保存登录会话 Cookie';
+    }
+    return '请稍候';
+});
+const actionText = computed(() => (hasSsoError.value || loopDetected.value ? '重新登录' : '手动跳转'));
+
+const AUTO_RETRY_WINDOW_MS = 60_000;
+const AUTO_RETRY_LIMIT = 1;
+
+const readRetryState = () => {
+    const lastRedirectAt = Number(sessionStorage.getItem('sso_last_redirect_at') || 0);
+    const retryCount = Number(sessionStorage.getItem('sso_redirect_retry_count') || 0);
+    if (Date.now() - lastRedirectAt > AUTO_RETRY_WINDOW_MS) {
+        sessionStorage.removeItem('sso_last_redirect_at');
+        sessionStorage.removeItem('sso_redirect_retry_count');
+        return { lastRedirectAt: 0, retryCount: 0 };
+    }
+    return { lastRedirectAt, retryCount };
+};
+
+const clearRetryState = () => {
+    sessionStorage.removeItem('sso_last_redirect_at');
+    sessionStorage.removeItem('sso_redirect_retry_count');
+};
+
+const handleManualAuthorize = () => {
+    clearRetryState();
+};
 
 onMounted(async () => {
     setTimeout(() => {
@@ -65,6 +106,7 @@ onMounted(async () => {
     try {
         const res = await api.v2.user.getUserInfo();
         if (res?.data) {
+            clearRetryState();
             setTimeout(async () => {
                 await router.replace('/home');
             }, 800);
@@ -75,11 +117,14 @@ onMounted(async () => {
     }
 
     const now = Date.now();
-    const lastRedirectAt = Number(sessionStorage.getItem('sso_last_redirect_at') || 0);
-    if (now - lastRedirectAt < 2000) {
+    const { retryCount } = readRetryState();
+    if (retryCount >= AUTO_RETRY_LIMIT) {
+        loopDetected.value = true;
+        showAction.value = true;
         return;
     }
     sessionStorage.setItem('sso_last_redirect_at', String(now));
+    sessionStorage.setItem('sso_redirect_retry_count', String(retryCount + 1));
     
     setTimeout(() => {
         window.location.replace(authorizeUrl.value);

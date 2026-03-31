@@ -293,6 +293,11 @@ const router = createRouter({
     routes,
 });
 
+const clearSsoRedirectState = () => {
+    sessionStorage.removeItem('sso_last_redirect_at');
+    sessionStorage.removeItem('sso_redirect_retry_count');
+};
+
 router.beforeEach(async (to, from, next) => {
     void from;
 
@@ -310,10 +315,15 @@ router.beforeEach(async (to, from, next) => {
     const userStore = useUserStore();
     const isAuthenticated = !!userStore.userInfo; // 检查是否存在用户信息
 
+    if (isAuthenticated) {
+        clearSsoRedirectState();
+    }
+
     if (to.meta.requiresAuth && !isAuthenticated) {
         try {
             const res = await api.v2.user.getUserInfo();
             userStore.setUser(res.data);
+            clearSsoRedirectState();
             next();
         } catch {
             next({ path: '/sign' });
