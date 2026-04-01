@@ -32,19 +32,38 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/api';
+import { hasAuthTokens } from '@/utils/authToken';
 
 const apiBaseUrl = 'https://cf-v2.uapis.cn';
-const returnUrl = 'https://panel.chmlfrp.net/home';
-
-const authorizeUrl = computed(() => `${apiBaseUrl}/sso/authorize?return_url=${encodeURIComponent(returnUrl)}`);
+const panelOrigin = 'https://panel.chmlfrp.net';
 
 const route = useRoute();
 const router = useRouter();
+
+const resolveRedirectPath = (rawValue: unknown) => {
+    if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
+        return '/home';
+    }
+
+    try {
+        const resolvedUrl = new URL(rawValue, panelOrigin);
+        if (resolvedUrl.origin !== panelOrigin) {
+            return '/home';
+        }
+        const fullPath = `${resolvedUrl.pathname}${resolvedUrl.search}${resolvedUrl.hash}`;
+        return fullPath === '/sign' ? '/home' : fullPath;
+    } catch {
+        return '/home';
+    }
+};
 
 const showCard = ref(false);
 const showAction = ref(false);
 const ssoError = computed(() => String(route.query.sso_error || '').trim());
 const hasSsoError = computed(() => ssoError.value.length > 0);
+const redirectPath = computed(() => resolveRedirectPath(route.query.redirect));
+const returnUrl = computed(() => new URL(redirectPath.value, panelOrigin).toString());
+const authorizeUrl = computed(() => `${apiBaseUrl}/sso/authorize?return_url=${encodeURIComponent(returnUrl.value)}`);
 const titleText = computed(() => (hasSsoError.value ? '登录已取消' : '正在安全连接'));
 const subtitleText = computed(() => (hasSsoError.value ? ssoError.value : '请稍候'));
 const actionText = computed(() => (hasSsoError.value ? '重新登录' : '手动跳转'));
@@ -65,13 +84,18 @@ onMounted(async () => {
     try {
         const res = await api.v2.user.getUserInfo();
         if (res?.data) {
+            sessionStorage.removeItem('sso_last_redirect_at');
             setTimeout(async () => {
-                await router.replace('/home');
+                await router.replace(redirectPath.value);
             }, 800);
             return;
         }
     } catch {
         void 0;
+    }
+
+    if (hasAuthTokens()) {
+        sessionStorage.removeItem('sso_last_redirect_at');
     }
 
     const now = Date.now();

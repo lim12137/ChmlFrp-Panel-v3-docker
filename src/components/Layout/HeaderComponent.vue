@@ -49,6 +49,7 @@
 </template>
 
 <script lang="ts" setup>
+import axios from 'axios';
 import { SettingsOutline } from '@vicons/ionicons5';
 import { useThemeStore } from '@/stores/theme';
 import { useScreenStore } from '@/stores/useScreen';
@@ -65,6 +66,7 @@ import {
 // 获取登录信息
 import { useUserStore } from '@/stores/user';
 import axiosInstance from '@/api/v2/axios/axiosInstance';
+import { clearAuthTokens, getRefreshToken } from '@/utils/authToken';
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 
@@ -118,10 +120,13 @@ const userDropdownOptions = ref<DropdownOption[]>([]);
 
 const handleLogout = async () => {
     try {
-        await axiosInstance.post('/sso/logout');
+        await axios.post(`${axiosInstance.defaults.baseURL}/sso/logout`, {
+            refresh_token: getRefreshToken(),
+        });
     } catch {
         void 0;
     } finally {
+        clearAuthTokens();
         userStore.clearUser();
         sessionStorage.removeItem('sso_last_redirect_at');
         window.location.replace('https://www.chmlfrp.net');

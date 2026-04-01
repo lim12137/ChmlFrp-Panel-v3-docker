@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { useProviderStore } from '../stores/provider';
 import { useUserStore } from '../stores/user';
 import api from '@/api';
+import { hasAuthTokens } from '@/utils/authToken';
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -302,21 +303,32 @@ router.beforeEach(async (to, from, next) => {
     if (to.path !== '/sign' && typeof ssoError === 'string' && ssoError.trim().length > 0) {
         next({
             path: '/sign',
-            query: { sso_error: ssoError },
+            query: { sso_error: ssoError, redirect: to.fullPath },
         });
         return;
     }
 
     const userStore = useUserStore();
-    const isAuthenticated = !!userStore.userInfo; // 检查是否存在用户信息
+    const tokenAvailable = hasAuthTokens();
+    const isAuthenticated = !!userStore.userInfo && tokenAvailable;
 
     if (to.meta.requiresAuth && !isAuthenticated) {
+        if (!tokenAvailable) {
+            next({
+                path: '/sign',
+                query: { redirect: to.fullPath },
+            });
+            return;
+        }
         try {
             const res = await api.v2.user.getUserInfo();
             userStore.setUser(res.data);
             next();
         } catch {
-            next({ path: '/sign' });
+            next({
+                path: '/sign',
+                query: { redirect: to.fullPath },
+            });
         }
     } else {
         next();
