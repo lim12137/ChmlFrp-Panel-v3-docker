@@ -1,6 +1,7 @@
 import axiosInstance from '../axios/axiosInstance';
 import axios from 'axios';
 import { BaseResponse } from '../axios/axiosInstance';
+import { getAuthorizationHeaders } from '@/utils/authToken';
 
 // SSL证书提供商类型
 export type SSLProvider = 'letsencrypt' | 'zerossl' | 'google';
@@ -178,7 +179,7 @@ export const downloadCertificate = async (
 ): Promise<string> => {
     const response = await axios.get(`${axiosInstance.defaults.baseURL}/ssl/download/${id}`, {
         params: { type },
-        withCredentials: true,
+        headers: getAuthorizationHeaders(),
         responseType: 'text',
     });
     return response.data;

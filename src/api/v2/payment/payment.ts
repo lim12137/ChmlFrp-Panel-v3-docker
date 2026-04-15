@@ -1,5 +1,6 @@
 import axios from 'axios';
 import axiosInstance from '../axios/axiosInstance';
+import { getAuthorizationHeaders } from '@/utils/authToken';
 const PAYMENT_BASE_URL = axiosInstance.defaults.baseURL + '/api/payment';
 
 /**
@@ -89,8 +90,8 @@ export const createPayment = async (request: CreatePaymentRequest): Promise<Crea
         const response = await axios.post<CreatePaymentResponse>(`${PAYMENT_BASE_URL}/create`, formData, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                ...getAuthorizationHeaders(),
             },
-            withCredentials: true,
         });
 
         return response.data;
@@ -114,7 +115,7 @@ export const queryPayment = async (request: QueryPaymentRequest): Promise<QueryP
             params: {
                 outTradeNo: request.outTradeNo,
             },
-            withCredentials: true,
+            headers: getAuthorizationHeaders(),
         });
 
         return response.data;

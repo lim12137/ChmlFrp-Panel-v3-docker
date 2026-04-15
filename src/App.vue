@@ -38,6 +38,7 @@ import nginx from 'highlight.js/lib/languages/nginx';
 import powershell from 'highlight.js/lib/languages/powershell';
 import bash from 'highlight.js/lib/languages/bash';
 import { dateZhCN, zhCN } from 'naive-ui';
+import { hasAuthTokens } from '@/utils/authToken';
 
 hljs.registerLanguage('ini', ini);
 hljs.registerLanguage('nginx', nginx);
@@ -47,7 +48,11 @@ hljs.registerLanguage('bash', bash);
 const userStore = useUserStore();
 
 onMounted(() => {
-    userStore.loadUser();
+    if (hasAuthTokens()) {
+        userStore.loadUser();
+        return;
+    }
+    userStore.clearUser();
 });
 
 // 获取当前年份

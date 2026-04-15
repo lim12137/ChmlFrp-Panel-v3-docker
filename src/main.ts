@@ -2,8 +2,11 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 import { createPinia } from 'pinia';
+import { consumeAuthTokensFromUrl } from '@/utils/authToken';
 import '@/assets/styles/themes.css';
 import '@/assets/styles/global.scss';
+
+consumeAuthTokensFromUrl();
 
 const app = createApp(App);
 
