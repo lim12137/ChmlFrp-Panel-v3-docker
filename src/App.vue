@@ -322,7 +322,9 @@ html {
         height: 100vh;
         z-index: -998;
         opacity: var(--background-mask-opacity, 0);
-        transition: opacity 0.3s ease, background-color 0.3s ease;
+        transition:
+            opacity 0.3s ease,
+            background-color 0.3s ease;
         pointer-events: none; // 确保遮罩不阻挡交互
         will-change: opacity, background-color; // 优化性能
     }
@@ -347,7 +349,7 @@ html {
     &[data-theme='dark']::after {
         background-color: rgba(0, 0, 0, 1) !important; // 暗色主题使用黑色遮罩
     }
-    
+
     // 确保遮罩在有背景图时显示
     &[style*='--background-image']::after {
         display: block !important;

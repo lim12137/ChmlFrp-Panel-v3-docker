@@ -3,10 +3,7 @@ import { useRouter } from 'vue-router';
 import { useDialog, useMessage } from 'naive-ui';
 import { useUserStore } from '@/stores/user';
 import api from '@/api';
-import {
-    KeyOutline,
-    CodeDownloadOutline,
-} from '@vicons/ionicons5';
+import { KeyOutline, CodeDownloadOutline } from '@vicons/ionicons5';
 
 /**
  * 用户设置 composable
@@ -92,12 +89,7 @@ export function useUserSettings() {
 /**
  * 创建设置卡片数据
  */
-export function createSettingsCards(
-    handlers: {
-        resetToken: () => void;
-        offlineAllTunnels: () => void;
-    }
-) {
+export function createSettingsCards(handlers: { resetToken: () => void; offlineAllTunnels: () => void }) {
     return [
         {
             title: '重置token',

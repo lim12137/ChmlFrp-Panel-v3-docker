@@ -131,7 +131,7 @@ const trafficOut = computed(() => formatBytes(props.card.today_traffic_out));
 
 const dropdownOptions = computed(() => {
     const options = [];
-    
+
     // 只在非手机端显示启动隧道功能
     if (!props.isMobile) {
         options.push({
@@ -144,7 +144,7 @@ const dropdownOptions = computed(() => {
             key: 'd0',
         });
     }
-    
+
     options.push({
         label: '编辑隧道',
         key: 'edit',
@@ -191,7 +191,7 @@ const dropdownOptions = computed(() => {
         },
         disabled: !props.deletetTunnelSuccess,
     });
-    
+
     return options;
 });
 

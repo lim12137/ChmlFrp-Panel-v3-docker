@@ -80,14 +80,19 @@ const persistTokens = (tokens: StoredAuthTokens) => {
 
 export const setAuthTokens = (options: SetAuthTokensOptions) => {
     const current = readStoredTokens();
-    const nextAccessToken = options.accessToken === undefined ? current.accessToken : normalizeTokenValue(options.accessToken);
-    const nextRefreshToken = options.refreshToken === undefined ? current.refreshToken : normalizeTokenValue(options.refreshToken);
+    const nextAccessToken =
+        options.accessToken === undefined ? current.accessToken : normalizeTokenValue(options.accessToken);
+    const nextRefreshToken =
+        options.refreshToken === undefined ? current.refreshToken : normalizeTokenValue(options.refreshToken);
 
     let nextExpiresAt = current.expiresAt;
     if (options.expiresAt !== undefined) {
         nextExpiresAt = normalizeExpiresAt(options.expiresAt);
     } else if (options.expiresIn !== undefined) {
-        nextExpiresAt = typeof options.expiresIn === 'number' && options.expiresIn > 0 ? Date.now() + options.expiresIn * 1000 : null;
+        nextExpiresAt =
+            typeof options.expiresIn === 'number' && options.expiresIn > 0
+                ? Date.now() + options.expiresIn * 1000
+                : null;
     } else if (options.accessToken !== undefined && nextAccessToken !== current.accessToken) {
         nextExpiresAt = null;
     }
