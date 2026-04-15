@@ -48,15 +48,6 @@
                     size="medium"
                 />
                 <div v-else-if="selectedLauncherOSData.length">
-                    <div style="margin-top: 20px">
-                        <n-alert type="info" :show-icon="false" style="margin-bottom: 20px">
-                            <strong>最新版本：{{ launcherVersion }}</strong>
-                            <span style="margin-left: 10px; color: #909399">{{ launcherTime }}</span>
-                            <div style="margin-top: 10px; white-space: pre-wrap; font-size: 13px">
-                                {{ launcherNotes }}
-                            </div>
-                        </n-alert>
-                    </div>
                     <n-card style="margin-top: 20px" v-for="item in selectedLauncherOSData" :key="item.platform">
                         <n-icon
                             :size="18"
@@ -191,9 +182,6 @@ const loading = ref<boolean>(true);
 // 图形客户端相关
 const selectedLauncherOS = ref<string>(detectOS() === 'freeBSD' ? 'Windows' : detectOS());
 const launcherLoading = ref<boolean>(true);
-const launcherVersion = ref<string>('');
-const launcherTime = ref<string>('');
-const launcherNotes = ref<string>('');
 const launcherWindows = ref<Array<{ platform: string; url: string }>>([]);
 const launcherLinux = ref<Array<{ platform: string; url: string }>>([]);
 const launcherDarwin = ref<Array<{ platform: string; url: string }>>([]);
@@ -202,13 +190,13 @@ const osList = [
     { name: 'Windows', label: 'Windows', icon: LogoWindows, color: '#409EFF' },
     { name: 'Linux', label: 'Linux', icon: LogoTux, color: '#e69824' },
     { name: 'freeBSD', label: 'freeBSD', icon: Freebsd, color: '#F56C6C' },
-    { name: 'Darwin', label: 'Darwin', icon: LogoApple, color: '#909399' },
+    { name: 'Darwin', label: 'MacOS', icon: LogoApple, color: '#909399' },
 ];
 
 const launcherOsList = [
     { name: 'Windows', label: 'Windows', icon: LogoWindows, color: '#409EFF' },
     { name: 'Linux', label: 'Linux', icon: LogoTux, color: '#e69824' },
-    { name: 'Darwin', label: 'Darwin', icon: LogoApple, color: '#909399' },
+    { name: 'Darwin', label: 'MacOS', icon: LogoApple, color: '#909399' },
 ];
 
 const osIcon: Record<string, typeof LogoWindows | typeof LogoApple | typeof LogoTux | typeof Freebsd> = {
@@ -244,7 +232,7 @@ const selectedLauncherOSData = computed(() => {
 });
 
 onMounted(async () => {
-    // 核心程序下载信息
+    // 获取核心程序下载信息
     getDownloadInfo()
         .then((response) => {
             Windows.value = response.data.system.windows;
@@ -261,13 +249,9 @@ onMounted(async () => {
             loading.value = false;
         });
 
-    // 图形客户端更新信息
+    // 获取图形客户端更新信息
     getLauncherUpdateInfo()
         .then((response) => {
-            launcherVersion.value = response.version;
-            launcherTime.value = new Date(response.pub_date).toLocaleString();
-            launcherNotes.value = response.notes;
-
             const platforms = response.platforms;
             for (const [key, value] of Object.entries(platforms)) {
                 const item = { platform: key, url: value.url };
