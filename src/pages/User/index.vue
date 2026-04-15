@@ -163,11 +163,9 @@ onMounted(() => {
 });
 
 const settingCard = computed(() =>
-    createSettingsCards(
-        {
-            resetToken,
-            offlineAllTunnels,
-        }
-    )
+    createSettingsCards({
+        resetToken,
+        offlineAllTunnels,
+    })
 );
 </script>

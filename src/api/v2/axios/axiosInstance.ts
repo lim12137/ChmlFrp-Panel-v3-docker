@@ -1,7 +1,13 @@
 import axios, { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import router from '@/router';
 import { useUserStore } from '@/stores/user';
-import { clearAuthTokens, getAccessToken, getRefreshToken, isAccessTokenExpired, setAuthTokens } from '@/utils/authToken';
+import {
+    clearAuthTokens,
+    getAccessToken,
+    getRefreshToken,
+    isAccessTokenExpired,
+    setAuthTokens,
+} from '@/utils/authToken';
 
 // 通用响应接口
 export interface BaseResponse {
@@ -70,10 +76,7 @@ const handleInvalidToken = () => {
 };
 
 const isInvalidLoginState = (data: any) => {
-    return (
-        data?.msg === '缺少登录态' ||
-        (data?.msg === '无效的登录状态' && data?.state === 'fail')
-    );
+    return data?.msg === '缺少登录态' || (data?.msg === '无效的登录状态' && data?.state === 'fail');
 };
 
 const refreshAccessToken = async () => {

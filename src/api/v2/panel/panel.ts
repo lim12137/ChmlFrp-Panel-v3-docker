@@ -76,3 +76,24 @@ export const getDownloadInfo = async (link?: string): Promise<DownloadInfoRespon
         params: link ? { link } : undefined,
     });
 };
+
+interface LauncherPlatform {
+    signature: string;
+    url: string;
+}
+
+interface LauncherUpdateData {
+    pub_date: string;
+    notes: string;
+    version: string;
+    platforms: Record<string, LauncherPlatform>;
+}
+
+/**
+ * 获取图形客户端更新信息
+ */
+export const getLauncherUpdateInfo = async (): Promise<LauncherUpdateData> => {
+    const res = await fetch('https://cf-v2.uapis.cn/launcher/update');
+    if (!res.ok) throw new Error('Failed to fetch launcher update info');
+    return res.json();
+};

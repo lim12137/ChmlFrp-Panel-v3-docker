@@ -9,16 +9,24 @@
         <div class="auth-content" :class="{ 'fade-in': showCard }">
             <div class="loader-wrapper" v-if="!hasSsoError">
                 <svg class="circular-loader" viewBox="25 25 50 50">
-                    <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="3" stroke-miterlimit="10" />
+                    <circle
+                        class="loader-path"
+                        cx="50"
+                        cy="50"
+                        r="20"
+                        fill="none"
+                        stroke-width="3"
+                        stroke-miterlimit="10"
+                    />
                 </svg>
             </div>
-            
+
             <div class="text-content">
                 <h1 class="auth-title">{{ titleText }}</h1>
                 <p class="auth-subtitle">{{ subtitleText }}</p>
                 <p class="auth-desc" v-if="hasSsoError">您已取消授权，点击下方按钮可重新发起登录。</p>
             </div>
-            
+
             <div class="auth-action" :class="{ 'show-action': showAction }">
                 <a :href="authorizeUrl" class="action-link">
                     <span>{{ actionText }}</span>
@@ -104,7 +112,7 @@ onMounted(async () => {
         return;
     }
     sessionStorage.setItem('sso_last_redirect_at', String(now));
-    
+
     setTimeout(() => {
         window.location.replace(authorizeUrl.value);
     }, 800);
@@ -122,7 +130,7 @@ onMounted(async () => {
     align-items: center;
     justify-content: center;
     background-color: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     color: #111111;
     z-index: 9999;
     overflow: hidden;
@@ -199,27 +207,57 @@ onMounted(async () => {
 }
 
 @keyframes converge-blue {
-    0% { transform: rotate(0deg) translateX(45vw) scale(1); }
-    40% { transform: rotate(144deg) translateX(5vw) scale(1.2); }
-    50% { transform: rotate(180deg) translateX(0%) scale(1.3); }
-    60% { transform: rotate(216deg) translateX(5vw) scale(1.2); }
-    100% { transform: rotate(360deg) translateX(45vw) scale(1); }
+    0% {
+        transform: rotate(0deg) translateX(45vw) scale(1);
+    }
+    40% {
+        transform: rotate(144deg) translateX(5vw) scale(1.2);
+    }
+    50% {
+        transform: rotate(180deg) translateX(0%) scale(1.3);
+    }
+    60% {
+        transform: rotate(216deg) translateX(5vw) scale(1.2);
+    }
+    100% {
+        transform: rotate(360deg) translateX(45vw) scale(1);
+    }
 }
 
 @keyframes converge-purple {
-    0% { transform: rotate(120deg) translateX(45vw) scale(1); }
-    40% { transform: rotate(264deg) translateX(5vw) scale(1.2); }
-    50% { transform: rotate(300deg) translateX(0%) scale(1.3); }
-    60% { transform: rotate(336deg) translateX(5vw) scale(1.2); }
-    100% { transform: rotate(480deg) translateX(45vw) scale(1); }
+    0% {
+        transform: rotate(120deg) translateX(45vw) scale(1);
+    }
+    40% {
+        transform: rotate(264deg) translateX(5vw) scale(1.2);
+    }
+    50% {
+        transform: rotate(300deg) translateX(0%) scale(1.3);
+    }
+    60% {
+        transform: rotate(336deg) translateX(5vw) scale(1.2);
+    }
+    100% {
+        transform: rotate(480deg) translateX(45vw) scale(1);
+    }
 }
 
 @keyframes converge-orange {
-    0% { transform: rotate(240deg) translateX(45vw) scale(1); }
-    40% { transform: rotate(384deg) translateX(5vw) scale(1.2); }
-    50% { transform: rotate(420deg) translateX(0%) scale(1.3); }
-    60% { transform: rotate(456deg) translateX(5vw) scale(1.2); }
-    100% { transform: rotate(600deg) translateX(45vw) scale(1); }
+    0% {
+        transform: rotate(240deg) translateX(45vw) scale(1);
+    }
+    40% {
+        transform: rotate(384deg) translateX(5vw) scale(1.2);
+    }
+    50% {
+        transform: rotate(420deg) translateX(0%) scale(1.3);
+    }
+    60% {
+        transform: rotate(456deg) translateX(5vw) scale(1.2);
+    }
+    100% {
+        transform: rotate(600deg) translateX(45vw) scale(1);
+    }
 }
 
 .auth-content {
@@ -282,13 +320,24 @@ onMounted(async () => {
 }
 
 @keyframes rotate {
-    100% { transform: rotate(360deg); }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes dash {
-    0% { stroke-dasharray: 1, 200; stroke-dashoffset: 0; }
-    50% { stroke-dasharray: 89, 200; stroke-dashoffset: -35px; }
-    100% { stroke-dasharray: 89, 200; stroke-dashoffset: -124px; }
+    0% {
+        stroke-dasharray: 1, 200;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -35px;
+    }
+    100% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -124px;
+    }
 }
 
 .text-content {

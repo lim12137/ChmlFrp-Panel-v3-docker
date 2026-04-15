@@ -271,7 +271,7 @@ const handleStartTunnel = async (card: TunnelCard) => {
             draggable: true,
             onPositiveClick: () => {
                 router.push('/tunnel/download');
-            }
+            },
         });
     } else {
         window.location.href = deepLink;

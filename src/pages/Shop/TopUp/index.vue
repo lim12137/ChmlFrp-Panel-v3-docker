@@ -57,7 +57,12 @@
                 <n-spin :show="loading.wxpay">
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-card size="small" hoverable @click="pay('wxpay')" :disabled="!isAmountValid || loading.wxpay">
+                            <n-card
+                                size="small"
+                                hoverable
+                                @click="pay('wxpay')"
+                                :disabled="!isAmountValid || loading.wxpay"
+                            >
                                 <n-space align="center">
                                     <n-icon size="40" color="#07C160">
                                         <LogoWechat />
@@ -74,7 +79,12 @@
                 <n-spin :show="loading.alipay">
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-card size="small" hoverable @click="pay('alipay')" :disabled="!isAmountValid || loading.alipay">
+                            <n-card
+                                size="small"
+                                hoverable
+                                @click="pay('alipay')"
+                                :disabled="!isAmountValid || loading.alipay"
+                            >
                                 <n-space align="center">
                                     <n-icon size="40" color="#1677FF">
                                         <LogoAlipay />
