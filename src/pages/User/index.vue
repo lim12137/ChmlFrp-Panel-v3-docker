@@ -11,13 +11,13 @@
                         style="margin-bottom: 8px; cursor: pointer"
                         @click="openRealnameConsole"
                     >
-                        您尚未实名，请前往轻爪账户控制台完成实名认证。根据中国法律规定，未实名将无法使用ChmlFrp提供的服务。
+                        您尚未实名，请前往轻爪账户控制台（点击跳转）完成实名认证。根据中国法律规定，未实名将无法使用ChmlFrp提供的服务。
                         <template #action>
                             <n-button text type="warning" @click.stop="openRealnameConsole">前往实名</n-button>
                         </template>
                     </n-alert>
                     <n-alert type="info" title="提示" style="cursor: pointer" @click="openAccountConsole">
-                        如果要更改账户信息，请前往轻爪账户控制台
+                        如果要更改账户信息，请前往轻爪账户控制台（点击跳转）
                         <template #action>
                             <n-button text type="primary" @click.stop="openAccountConsole">前往控制台</n-button>
                         </template>
