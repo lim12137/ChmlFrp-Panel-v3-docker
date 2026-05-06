@@ -7,6 +7,7 @@ FROM node:18-alpine AS frontend-build
 
 LABEL stage=frontend-build
 WORKDIR /app
+ENV GENERATE_SOURCEMAP=false
 
 # 复制前端依赖文件
 COPY frontend/package*.json ./
@@ -14,7 +15,7 @@ RUN npm install --production=false
 
 # 复制前端源码并构建
 COPY frontend/ .
-RUN npm run build
+RUN npm run build && find build -name '*.map' -delete
 
 # ============ 后端准备阶段 ============
 FROM node:18-alpine AS backend-build
@@ -49,7 +50,7 @@ LABEL version="1.0.0"
 LABEL author="linluo"
 
 # 安装Node.js和必要工具
-RUN apk add --no-cache nodejs npm curl wget
+RUN apk add --no-cache nodejs curl
 
 # 创建应用目录
 RUN mkdir -p /app/backend /app/data /app/configs /app/logs
@@ -61,8 +62,6 @@ COPY --from=frontend-build /app/build /usr/share/nginx/html
 COPY --from=backend-build /app /app/backend
 COPY --from=backend-build /usr/local/bin/frpc /app/frpc
 COPY --from=backend-build /usr/local/bin/frps /app/frps
-COPY --from=backend-build /usr/local/bin/frpc /usr/local/bin/
-COPY --from=backend-build /usr/local/bin/frps /usr/local/bin/
 
 # 复制nginx配置
 COPY nginx.conf /etc/nginx/nginx.conf
