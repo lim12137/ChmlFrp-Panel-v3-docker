@@ -32,8 +32,8 @@
 
 ```bash
 # 一键启动
-docker pull ghcr.io/linluo208/chmlfrp-panel:latest
-docker run -d --name chmlfrp-panel --restart unless-stopped -p 8888:80 -p 3001:3001 -p 7000:7000 -p 7400:7400 -p 7500:7500 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai ghcr.io/linluo208/chmlfrp-panel:latest
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
+docker run -d --name chmlfrp-panel --restart unless-stopped -p 8888:80 -p 3001:3001 -p 7000:7000 -p 7400:7400 -p 7500:7500 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai ghcr.io/lim12137/chmlfrp-panel:latest
 
 # 访问面板
 open http://localhost:8888
@@ -48,12 +48,12 @@ open http://localhost:8888
 
 #### 步骤2：拉取镜像
 ```bash
-docker pull ghcr.io/linluo208/chmlfrp-panel:latest
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 #### 步骤3：创建容器
 1. Docker管理器 → **镜像管理** → **拉取镜像**
-2. 输入 `ghcr.io/linluo208/chmlfrp-panel:latest`
+2. 输入 `ghcr.io/lim12137/chmlfrp-panel:latest`
 
 #### 步骤3.1：检查运行状态
 ```bash
@@ -99,7 +99,7 @@ docker run -d \
   -v /www/chmlfrp/configs:/app/configs \
   -e TZ=Asia/Shanghai \
   --restart unless-stopped \
-  ghcr.io/linluo208/chmlfrp-panel:latest
+  ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 ## 📸 界面预览

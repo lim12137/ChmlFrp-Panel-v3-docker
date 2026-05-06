@@ -50,7 +50,7 @@
 ```bash
 git clone https://github.com/lim12137/ChmlFrp-Panel-v3-docker.git
 cd ChmlFrp-Panel-v3-docker
-docker build -t ghcr.io/linluo208/chmlfrp-panel:latest -f Dockerfile .
+docker build -t ghcr.io/lim12137/chmlfrp-panel:latest -f Dockerfile .
 ```
 
 #### 步骤3：导入镜像
@@ -70,7 +70,7 @@ gunzip -c chmlfrp-panel-docker-image.tar.gz | docker load
 
 **宝塔面板创建：**
 
-1. 找到镜像 `ghcr.io/linluo208/chmlfrp-panel:latest`
+1. 找到镜像 `ghcr.io/lim12137/chmlfrp-panel:latest`
 2. 点击 **创建容器**
 3. 配置参数：
 
@@ -99,14 +99,14 @@ docker run -d \
   -v /www/chmlfrp/configs:/app/configs \
   -e TZ=Asia/Shanghai \
   --restart unless-stopped \
-  ghcr.io/linluo208/chmlfrp-panel:latest
+  ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 **更新镜像：**
 ```bash
-docker pull ghcr.io/linluo208/chmlfrp-panel:latest
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
 docker rm -f chmlfrp-panel
-docker run -d --name chmlfrp-panel -p 8888:80 -p 3001:3001 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai --restart unless-stopped ghcr.io/linluo208/chmlfrp-panel:latest
+docker run -d --name chmlfrp-panel -p 8888:80 -p 3001:3001 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai --restart unless-stopped ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 #### 步骤5：开放端口
@@ -178,7 +178,7 @@ docker run -d \
   -v /www/chmlfrp/configs:/app/configs \
   -e TZ=Asia/Shanghai \
   --restart unless-stopped \
-  ghcr.io/linluo208/chmlfrp-panel:latest
+  ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 ## ❗ 常见问题

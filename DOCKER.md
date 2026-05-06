@@ -36,7 +36,7 @@ docker run -d \
   -v chmlfrp-logs:/app/logs \
   -e NODE_ENV=production \
   -e TZ=Asia/Shanghai \
-  ghcr.io/linluo208/chmlfrp-panel:latest
+  ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 说明：
@@ -56,7 +56,7 @@ wget https://github.com/lim12137/ChmlFrp-Panel-v3-docker/releases/latest/downloa
 docker load -i chmlfrp-panel.tar
 
 # 3. 运行容器
-docker run -d --name chmlfrp-panel -p 8888:80 ghcr.io/linluo208/chmlfrp-panel:latest
+docker run -d --name chmlfrp-panel -p 8888:80 ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 #### 选项2：使用导入脚本
@@ -84,7 +84,7 @@ docker-compose up -d
 
 | 信息 | 值 |
 |------|-----|
-| **镜像名称** | `ghcr.io/linluo208/chmlfrp-panel` |
+| **镜像名称** | `ghcr.io/lim12137/chmlfrp-panel` |
 | **最新版本** | `latest` |
 | **基础镜像** | `nginx:alpine` + `node:18-alpine` |
 | **镜像大小** | ~200MB |
@@ -177,7 +177,7 @@ docker run --rm -v chmlfrp-data:/data -v $(pwd):/backup alpine tar xzf /backup/c
 ### 1. 通过Docker管理器
 
 1. **安装Docker管理器**（宝塔应用商店）
-2. **拉取镜像**：`ghcr.io/linluo208/chmlfrp-panel:latest`
+2. **拉取镜像**：`ghcr.io/lim12137/chmlfrp-panel:latest`
 3. **创建容器**：
    - 容器名：`chmlfrp-panel`
    - 端口映射：`8888:80, 3001:3001, 7000:7000, 7400:7400, 7500:7500`
