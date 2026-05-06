@@ -33,21 +33,40 @@
 ### 一键部署
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-username/chmlfrp-docker.git
-cd chmlfrp-docker
+# 拉取镜像
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
 
-# 启动服务
-docker-compose up -d
+# 创建数据目录
+mkdir -p /www/chmlfrp/{data,logs,configs}
 
-# 查看状态
-docker-compose ps
+# 启动容器
+docker run -d \
+  --name chmlfrp-panel \
+  --restart unless-stopped \
+  -p 8888:80 \
+  -p 3001:3001 \
+  -p 7000:7000 \
+  -p 7400:7400 \
+  -p 7500:7500 \
+  -v /www/chmlfrp/data:/app/data \
+  -v /www/chmlfrp/logs:/app/logs \
+  -v /www/chmlfrp/configs:/app/configs \
+  -e TZ=Asia/Shanghai \
+  ghcr.io/lim12137/chmlfrp-panel:latest
 ```
 
 ### 访问面板
 
 - **管理面板**: http://localhost:8888
 - **后端API**: http://localhost:3001
+
+### 更新镜像
+
+```bash
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
+docker rm -f chmlfrp-panel
+docker run -d --name chmlfrp-panel --restart unless-stopped -p 8888:80 -p 3001:3001 -p 7000:7000 -p 7400:7400 -p 7500:7500 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai ghcr.io/lim12137/chmlfrp-panel:latest
+```
 
 默认会自动打开浏览器访问管理面板。
 
@@ -216,7 +235,7 @@ networks:
 ### 项目结构
 
 ```
-chmlfrp-docker/
+ChmlFrp-Panel-v3-docker/
 ├── frontend/                 # React前端
 │   ├── src/
 │   │   ├── components/      # React组件
@@ -425,9 +444,9 @@ docker cp chmlfrp_docker-backend-1:/app/frpc.log ./backup/
 
 ## 📞 联系方式
 
-- **GitHub**: [项目地址](https://github.com/your-username/chmlfrp-docker)
-- **Issues**: [问题反馈](https://github.com/your-username/chmlfrp-docker/issues)
-- **Discussions**: [交流讨论](https://github.com/your-username/chmlfrp-docker/discussions)
+- **GitHub**: [项目地址](https://github.com/lim12137/ChmlFrp-Panel-v3-docker)
+- **Issues**: [问题反馈](https://github.com/lim12137/ChmlFrp-Panel-v3-docker/issues)
+- **Discussions**: [交流讨论](https://github.com/lim12137/ChmlFrp-Panel-v3-docker/discussions)
 
 ---
 

@@ -13,6 +13,13 @@
 curl -fsSL https://raw.githubusercontent.com/lim12137/ChmlFrp-Panel-v3-docker/master/deploy.sh | bash
 ```
 
+推荐先确认这 3 项：
+```bash
+docker pull ghcr.io/lim12137/chmlfrp-panel:latest
+mkdir -p /www/chmlfrp/{data,logs,configs}
+docker ps
+```
+
 ### 方法二：Docker Run
 
 ```bash
@@ -31,6 +38,12 @@ docker run -d \
   -e TZ=Asia/Shanghai \
   ghcr.io/linluo208/chmlfrp-panel:latest
 ```
+
+说明：
+- `8888` 是前端入口
+- `3001` 是后端接口
+- `7000/7400/7500` 是 FRP 相关端口
+- `/app/data` 必须挂载，否则重启后登录和配置会丢
 
 ### 方法三：离线部署（网络受限环境）
 
@@ -142,6 +155,12 @@ docker-compose pull
 
 # 重新启动服务
 docker-compose up -d
+```
+
+### 排错
+```bash
+docker logs -f chmlfrp-panel
+docker inspect chmlfrp-panel --format '{{json .Mounts}}'
 ```
 
 ### 数据备份

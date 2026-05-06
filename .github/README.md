@@ -32,9 +32,8 @@
 
 ```bash
 # 一键启动
-git clone https://github.com/lim12137/ChmlFrp-Panel-v3-docker.git
-cd ChmlFrp-Panel-v3-docker
-docker-compose up -d
+docker pull ghcr.io/linluo208/chmlfrp-panel:latest
+docker run -d --name chmlfrp-panel --restart unless-stopped -p 8888:80 -p 3001:3001 -p 7000:7000 -p 7400:7400 -p 7500:7500 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai ghcr.io/linluo208/chmlfrp-panel:latest
 
 # 访问面板
 open http://localhost:8888
@@ -55,6 +54,12 @@ docker pull ghcr.io/linluo208/chmlfrp-panel:latest
 #### 步骤3：创建容器
 1. Docker管理器 → **镜像管理** → **拉取镜像**
 2. 输入 `ghcr.io/linluo208/chmlfrp-panel:latest`
+
+#### 步骤3.1：检查运行状态
+```bash
+docker ps | grep chmlfrp-panel
+docker logs -f chmlfrp-panel
+```
 
 #### 步骤4：创建容器
 **基础配置：**
@@ -165,10 +170,10 @@ docker run -d \
 
 ## 📊 项目状态
 
-![GitHub stars](https://img.shields.io/github/stars/your-username/chmlfrp-docker)
-![GitHub forks](https://img.shields.io/github/forks/your-username/chmlfrp-docker)
-![GitHub issues](https://img.shields.io/github/issues/your-username/chmlfrp-docker)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/your-username/chmlfrp-docker)
+![GitHub stars](https://img.shields.io/github/stars/lim12137/ChmlFrp-Panel-v3-docker)
+![GitHub forks](https://img.shields.io/github/forks/lim12137/ChmlFrp-Panel-v3-docker)
+![GitHub issues](https://img.shields.io/github/issues/lim12137/ChmlFrp-Panel-v3-docker)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/lim12137/ChmlFrp-Panel-v3-docker)
 
 ## 🤝 贡献
 
@@ -192,7 +197,7 @@ docker run -d \
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=your-username/chmlfrp-docker&type=Date)](https://star-history.com/#your-username/chmlfrp-docker&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=lim12137/ChmlFrp-Panel-v3-docker&type=Date)](https://star-history.com/#lim12137/ChmlFrp-Panel-v3-docker&Date)
 
 ---
 

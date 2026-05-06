@@ -43,13 +43,13 @@
 #### 步骤2：获取镜像
 
 **方法A：从GitHub下载**
-1. 访问：[GitHub Releases](https://github.com/your-username/chmlfrp-docker/releases)
+1. 访问：[GitHub Releases](https://github.com/lim12137/ChmlFrp-Panel-v3-docker/releases)
 2. 下载：`chmlfrp-panel-docker-image.tar.gz`
 
 **方法B：直接构建**
 ```bash
-git clone https://github.com/your-username/chmlfrp-docker.git
-cd chmlfrp-docker
+git clone https://github.com/lim12137/ChmlFrp-Panel-v3-docker.git
+cd ChmlFrp-Panel-v3-docker
 docker build -t ghcr.io/linluo208/chmlfrp-panel:latest -f Dockerfile .
 ```
 
@@ -100,6 +100,13 @@ docker run -d \
   -e TZ=Asia/Shanghai \
   --restart unless-stopped \
   ghcr.io/linluo208/chmlfrp-panel:latest
+```
+
+**更新镜像：**
+```bash
+docker pull ghcr.io/linluo208/chmlfrp-panel:latest
+docker rm -f chmlfrp-panel
+docker run -d --name chmlfrp-panel -p 8888:80 -p 3001:3001 -v /www/chmlfrp/data:/app/data -v /www/chmlfrp/logs:/app/logs -v /www/chmlfrp/configs:/app/configs -e TZ=Asia/Shanghai --restart unless-stopped ghcr.io/linluo208/chmlfrp-panel:latest
 ```
 
 #### 步骤5：开放端口
@@ -218,8 +225,8 @@ docker run -d \
 ## 📞 技术支持
 
 - **文档**: [完整部署文档](README.md)
-- **问题反馈**: [GitHub Issues](https://github.com/your-username/chmlfrp-docker/issues)
-- **交流讨论**: [讨论区](https://github.com/your-username/chmlfrp-docker/discussions)
+- **问题反馈**: [GitHub Issues](https://github.com/lim12137/ChmlFrp-Panel-v3-docker/issues)
+- **交流讨论**: [讨论区](https://github.com/lim12137/ChmlFrp-Panel-v3-docker/discussions)
 
 ## 🎬 视频教程
 
