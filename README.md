@@ -187,33 +187,18 @@ LOG_LEVEL=info
 ### Docker配置
 
 ```yaml
-version: '3.8'
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+  chmlfrp-panel:
+    image: ghcr.io/lim12137/chmlfrp-panel:latest
     ports:
       - "${FRONTEND_PORT:-8888}:80"
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-3001}:3001"
     volumes:
       - frp-data:/app/data
     restart: unless-stopped
 
 volumes:
   frp-data:
-
-networks:
-  default:
-    name: frp-network
 ```
 
 ### 断线重连配置
@@ -364,18 +349,18 @@ POST /api/dns/records/create
 #### 1. 容器启动失败
 ```bash
 # 查看日志
-docker-compose logs backend
-docker-compose logs frontend
+docker-compose logs chmlfrp-panel
 
-# 重新构建
+# 重新拉取并启动
 docker-compose down
-docker-compose up -d --build
+docker-compose pull
+docker-compose up -d
 ```
 
 #### 2. 隧道连接失败
 - 检查FRP配置是否正确
 - 确认节点状态是否在线
-- 查看隧道日志: `docker exec -it backend-container cat /app/frpc.log`
+- 查看隧道日志: `docker exec -it chmlfrp-panel cat /app/frpc.log`
 
 #### 3. DNS配置失败
 - 验证API凭证是否正确
