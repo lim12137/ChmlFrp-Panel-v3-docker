@@ -1,5 +1,6 @@
 import axios, { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import router from '@/router';
+import { appConfig } from '@/config/appConfig';
 import { useUserStore } from '@/stores/user';
 import {
     clearAuthTokens,
@@ -34,7 +35,7 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const axiosInstance = axios.create({
-    baseURL: 'https://cf-v2.uapis.cn',
+    baseURL: appConfig.apiBaseUrl,
     timeout: 30000,
     withCredentials: false,
     headers: {

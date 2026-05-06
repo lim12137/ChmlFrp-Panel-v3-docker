@@ -168,6 +168,21 @@ pnpm format
 
 ---
 
+## Docker 部署
+
+项目已补充 Docker 镜像构建能力，包含：
+
+- 多阶段构建 `Dockerfile`
+- 基于 Nginx 的静态托管
+- 容器启动时注入 `config.js` 的运行时配置
+- GitHub Actions 自动构建并推送到 GHCR
+
+详细说明见：
+
+- [docs/docker-image.md](./docs/docker-image.md)
+
+---
+
 ## 许可证
 
 本项目采用 [Apache License 2.0](./LICENSE) 许可证。

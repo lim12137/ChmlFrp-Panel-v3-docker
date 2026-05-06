@@ -40,10 +40,10 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/api';
+import { appConfig } from '@/config/appConfig';
 import { hasAuthTokens } from '@/utils/authToken';
 
-const apiBaseUrl = 'https://cf-v2.uapis.cn';
-const panelOrigin = 'https://panel.chmlfrp.net';
+const { apiBaseUrl, panelOrigin } = appConfig;
 
 const route = useRoute();
 const router = useRouter();

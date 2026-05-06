@@ -66,6 +66,7 @@ import {
 // 获取登录信息
 import { useUserStore } from '@/stores/user';
 import axiosInstance from '@/api/v2/axios/axiosInstance';
+import { appConfig } from '@/config/appConfig';
 import { clearAuthTokens, getRefreshToken } from '@/utils/authToken';
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
@@ -129,7 +130,7 @@ const handleLogout = async () => {
         clearAuthTokens();
         userStore.clearUser();
         sessionStorage.removeItem('sso_last_redirect_at');
-        window.location.replace('https://www.chmlfrp.net');
+        window.location.replace(appConfig.siteOrigin);
     }
 };
 

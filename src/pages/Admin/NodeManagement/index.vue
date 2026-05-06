@@ -417,6 +417,7 @@ import {
     NDropdown,
     useDialog,
 } from 'naive-ui';
+import { appConfig, buildUrl } from '@/config/appConfig';
 import {
     Add as AddIcon,
     Refresh as RefreshIcon,
@@ -1341,7 +1342,7 @@ authentication_timeout = 0
 log_level = warn
 log_max_days = 3
 api_enable = true
-api_baseurl = http://cf-v2.uapis.cn/cfg
+api_baseurl = ${buildUrl(appConfig.apiBaseUrl, '/cfg')}
 api_token = ${node.apitoken}`;
 });
 
@@ -1366,7 +1367,7 @@ const deployCode = computed(() => {
     // 判断是否可建站
     const canWeb = node.web === 'yes' || node.web === 'true' ? 'true' : 'false';
 
-    return `curl -O https://www.chmlfrp.net/script/linux/server_deploy.sh && chmod +x server_deploy.sh && sudo ./server_deploy.sh --skip-source-check ${node.port} ${node.adminPort} ${username} ${password} ${node.nodetoken} 7001 http://cf-v2.uapis.cn/cfg "${node.apitoken}" ${canWeb}`;
+    return `curl -O ${buildUrl(appConfig.siteOrigin, '/script/linux/server_deploy.sh')} && chmod +x server_deploy.sh && sudo ./server_deploy.sh --skip-source-check ${node.port} ${node.adminPort} ${username} ${password} ${node.nodetoken} 7001 ${buildUrl(appConfig.apiBaseUrl, '/cfg')} "${node.apitoken}" ${canWeb}`;
 });
 
 // 搜索处理函数

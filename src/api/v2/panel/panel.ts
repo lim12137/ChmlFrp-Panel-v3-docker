@@ -1,5 +1,6 @@
 import axiosInstance from '../axios/axiosInstance';
 import { BaseResponse } from '../axios/axiosInstance';
+import { appConfig, buildUrl } from '@/config/appConfig';
 
 interface FriendLink {
     name: string;
@@ -93,7 +94,7 @@ interface LauncherUpdateData {
  * 获取图形客户端更新信息
  */
 export const getLauncherUpdateInfo = async (): Promise<LauncherUpdateData> => {
-    const res = await fetch('https://cf-v2.uapis.cn/launcher/update');
+    const res = await fetch(buildUrl(appConfig.apiBaseUrl, '/launcher/update'));
     if (!res.ok) throw new Error('Failed to fetch launcher update info');
     return res.json();
 };
