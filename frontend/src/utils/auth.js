@@ -185,7 +185,7 @@ export const pollDeviceAuthorization = async (deviceCode) => {
   const response = await rawAxios.post('/oauth/device_token', { deviceCode });
   if (response.data.code !== 200) {
     const error = new Error(response.data.msg || '设备授权尚未完成');
-    error.payload = response.data.data;
+    error.payload = response.data;
     throw error;
   }
   return response.data.data;

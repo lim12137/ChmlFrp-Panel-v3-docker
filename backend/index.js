@@ -101,6 +101,48 @@ function extractBearerToken(authHeader) {
     return authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
 }
 
+function extractLegacyUserToken(userInfo = {}) {
+    return userInfo?.usertoken
+        || userInfo?.userToken
+        || userInfo?.token
+        || userInfo?.new_token
+        || userInfo?.newToken
+        || userInfo?.data?.usertoken
+        || userInfo?.data?.userToken
+        || userInfo?.data?.token
+        || userInfo?.data?.new_token
+        || null;
+}
+
+async function fetchOAuthUserInfo(accessToken) {
+    const endpointCandidates = [
+        `${ACCOUNT_OAUTH_ISSUER}/userinfo`,
+        `${ACCOUNT_OAUTH_ISSUER}/oauth2/userinfo`
+    ];
+
+    let lastError = null;
+    for (const url of endpointCandidates) {
+        try {
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    Accept: 'application/json'
+                },
+                timeout: 15000
+            });
+            return response.data;
+        } catch (error) {
+            lastError = error;
+            const status = error.response?.status;
+            if (status && status !== 404 && status !== 405) {
+                throw error;
+            }
+        }
+    }
+
+    throw lastError || new Error('获取 OAuth 用户信息失败');
+}
+
 async function refreshOAuthAccessToken(refreshToken) {
     const body = new URLSearchParams();
     body.set('grant_type', 'refresh_token');
@@ -183,22 +225,22 @@ async function getSavedLoginInfo() {
 async function resolveAuthContext(req) {
     const savedLogin = await getSavedLoginInfo();
     const requestToken = extractBearerToken(req.headers.authorization);
+    const legacyToken = requestToken || savedLogin?.usertoken || savedLogin?.token || null;
+
+    if (legacyToken) {
+        return {
+            mode: savedLogin?.accessToken ? 'oauth' : 'legacy',
+            authorizationHeader: `Bearer ${legacyToken}`,
+            queryToken: legacyToken,
+            savedLogin
+        };
+    }
 
     if (savedLogin?.accessToken) {
         return {
             mode: 'oauth',
             authorizationHeader: `Bearer ${savedLogin.accessToken}`,
             queryToken: null,
-            savedLogin
-        };
-    }
-
-    const legacyToken = requestToken || savedLogin?.usertoken || savedLogin?.token || null;
-    if (legacyToken) {
-        return {
-            mode: 'legacy',
-            authorizationHeader: `Bearer ${legacyToken}`,
-            queryToken: legacyToken,
             savedLogin
         };
     }
@@ -571,10 +613,13 @@ app.post('/api/oauth/device_token', async (req, res) => {
             validateStatus: () => true
         });
 
+        const oauthError = response.data?.error || '';
+        const pending = oauthError === 'authorization_pending' || oauthError === 'slow_down';
         const success = response.status >= 200 && response.status < 300 && response.data?.access_token;
-        res.status(success ? 200 : 400).json({
+
+        res.status(success ? 200 : (pending ? 202 : 400)).json({
             code: success ? 200 : -1,
-            state: success ? 'success' : 'pending',
+            state: success ? 'success' : (pending ? 'pending' : 'error'),
             msg: success ? '设备授权成功' : (response.data?.error_description || response.data?.error || '设备授权尚未完成'),
             data: response.data
         });
@@ -601,18 +646,32 @@ app.post('/api/login_with_access_token', async (req, res) => {
             });
         }
 
-        const userInfoResponse = await fetchChmlFrpUserInfo({ accessToken });
-        if (!userInfoResponse || userInfoResponse.code !== 200 || !userInfoResponse.data) {
+        let oauthUserInfo;
+        try {
+            oauthUserInfo = await fetchOAuthUserInfo(accessToken);
+        } catch (error) {
+            return res.status(error.response?.status || 401).json({
+                code: -1,
+                state: 'error',
+                msg: error.response?.data?.error_description || error.response?.data?.error || 'OAuth Access Token无效',
+                data: null
+            });
+        }
+        const legacyToken = extractLegacyUserToken(oauthUserInfo);
+        const userInfoResponse = legacyToken
+            ? await fetchChmlFrpUserInfo({ legacyToken })
+            : null;
+
+        if (!legacyToken || !userInfoResponse || userInfoResponse.code !== 200 || !userInfoResponse.data) {
             return res.status(401).json({
                 code: -1,
                 state: 'error',
-                msg: userInfoResponse?.msg || 'Access Token无效',
+                msg: legacyToken ? (userInfoResponse?.msg || 'Access Token无效') : 'OAuth登录成功，但未获取到可用于 ChmlFrp 的 usertoken',
                 data: null
             });
         }
 
         const userInfo = userInfoResponse.data;
-        const legacyToken = userInfo.usertoken || null;
         saveLoginInfo({
             username: userInfo.username,
             password: '',

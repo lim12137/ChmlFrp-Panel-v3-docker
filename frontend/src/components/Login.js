@@ -75,6 +75,7 @@ const Login = ({ onLogin }) => {
       const data = await startDeviceAuthorization();
       setDeviceState({ loading: false, pending: true, data, error: '' });
       stopPolling();
+      const pollInterval = Math.max(3000, Number(data.interval || 5) * 1000);
       pollTimerRef.current = setInterval(async () => {
         try {
           const tokenData = await pollDeviceAuthorization(data.device_code);
@@ -88,12 +89,16 @@ const Login = ({ onLogin }) => {
           });
         } catch (error) {
           const pendingMessage = error.payload?.error_description || error.payload?.error || error.message || '';
-          if (!String(pendingMessage).includes('authorization_pending') && !String(pendingMessage).includes('slow_down')) {
+          const isPending = error.payload?.state === 'pending'
+            || String(pendingMessage).includes('authorization_pending')
+            || String(pendingMessage).includes('slow_down')
+            || String(pendingMessage).includes('尚未完成');
+          if (!isPending) {
             stopPolling();
             setDeviceState({ loading: false, pending: false, data: null, error: pendingMessage || '设备授权失败' });
           }
         }
-      }, 3000);
+      }, pollInterval);
     } catch (error) {
       stopPolling();
       setDeviceState({ loading: false, pending: false, data: null, error: error.message });
