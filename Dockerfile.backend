@@ -1,0 +1,35 @@
+# ChmlFrp Docker管理面板 - 后端构建  
+# Author: linluo
+# 防盗标识: linluo
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 安装curl和其他必要工具
+RUN apk add --no-cache curl wget tzdata
+
+# 创建必要的目录和文件
+RUN mkdir -p /app/logs && \
+    echo '#!/bin/sh' > /app/frpc && \
+    echo 'echo "FRP client placeholder - will be downloaded at runtime"' >> /app/frpc && \
+    echo '#!/bin/sh' > /app/frps && \
+    echo 'echo "FRP server placeholder - will be downloaded at runtime"' >> /app/frps && \
+    chmod +x /app/frpc /app/frps
+
+# 复制package.json并安装依赖
+COPY backend/package*.json ./
+RUN npm install
+
+# 复制源代码
+COPY backend/ .
+
+# 复制启动脚本
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# 暴露端口 (3001: API, 7400: FRP Admin, 7000: FRP Server, 7500: FRP Server Dashboard)
+EXPOSE 3001 7000 7400 7500
+
+# 启动应用
+CMD ["/app/start.sh"]
