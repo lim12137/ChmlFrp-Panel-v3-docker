@@ -39,7 +39,7 @@ import {
   ClearOutlined
 } from '@ant-design/icons';
 import axios from '../utils/auth';
-import { getAuthorizationHeader, getLegacyToken } from '../utils/auth';
+import { getAuthorizationHeader, getAuthorizationToken } from '../utils/auth';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -505,7 +505,7 @@ const TunnelManagement = () => {
 
       // 调用免费二级域名更新API - 使用官方正确的参数格式
       const updateData = {
-        token: getLegacyToken(),
+        token: getAuthorizationToken(),
         domain: freeSubdomain.domain, // 主域名，如 "映射.中国"
         record: freeSubdomain.record, // 子域名前缀，如 "apiiaa"
         target: selectedNode.ip, // 目标节点域名

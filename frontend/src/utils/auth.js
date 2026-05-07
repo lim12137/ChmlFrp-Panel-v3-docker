@@ -59,9 +59,9 @@ export const saveAuthData = (payload) => persistAuthData(payload);
 
 export const getAuthInfo = () => readAuthInfo();
 
-export const getLegacyToken = () => readAuthInfo()?.usertoken || localStorage.getItem('usertoken') || localStorage.getItem('token');
-
 export const getAccessToken = () => readAuthInfo()?.accessToken || null;
+
+export const getLegacyToken = () => readAuthInfo()?.usertoken || localStorage.getItem('usertoken') || localStorage.getItem('token');
 
 export const getAuthorizationToken = () => getAccessToken() || getLegacyToken();
 
@@ -118,59 +118,6 @@ const handleTokenInvalid = () => {
   setTimeout(() => {
     window.location.href = '/login';
   }, 1500);
-};
-
-// 用户名密码登录函数
-export const login = async (username, password) => {
-  try {
-    const response = await rawAxios.get('/login', {
-      params: { username, password }
-    });
-
-    if (response.data.code === 200) {
-      persistAuthData({
-        userInfo: response.data.data,
-        usertoken: response.data.data.usertoken || response.data.data.token || null
-      });
-      return response.data;
-    }
-    throw new Error(response.data.msg || '登录失败');
-  } catch (error) {
-    throw new Error(error.response?.data?.msg || error.message || '登录失败');
-  }
-};
-
-// Token登录函数
-export const loginWithToken = async (token) => {
-  try {
-    const verifyResponse = await rawAxios.get('/userinfo', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (verifyResponse.data.code === 200) {
-      const userInfo = verifyResponse.data.data;
-
-      try {
-        await rawAxios.post('/login_with_token', {
-          username: userInfo.username,
-          token
-        });
-      } catch (saveError) {
-        console.warn('保存登录信息失败，但token验证成功:', saveError);
-      }
-
-      persistAuthData({
-        userInfo,
-        usertoken: token
-      });
-      return verifyResponse.data;
-    }
-    throw new Error(verifyResponse.data.msg || 'Token登录失败');
-  } catch (error) {
-    throw new Error(error.response?.data?.msg || error.message || 'Token无效或已过期');
-  }
 };
 
 export const startDeviceAuthorization = async () => {

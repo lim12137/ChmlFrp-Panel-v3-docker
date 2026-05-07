@@ -62,12 +62,14 @@ window.antd = { message };
 const _COPYRIGHT_INFO = {
   name: 'ChmlFrp Docker管理面板',
   author: String.fromCharCode(...[108, 105, 110, 108, 117, 111]),
+  updatedAuthor: String.fromCharCode(...[108, 105, 109, 49, 50, 49, 51, 55]),
   year: parseInt('0x7E9', 16), // 2025
   build: '1.0.0'
 };
 
 console.log('%c ' + _COPYRIGHT_INFO.name + ' ', 'background: #1890ff; color: white; padding: 5px 10px; border-radius: 3px;');
 console.log('%c Author: ' + _COPYRIGHT_INFO.author + ' ', 'background: #52c41a; color: white; padding: 3px 8px; border-radius: 3px;');
+console.log('%c Updated by: ' + _COPYRIGHT_INFO.updatedAuthor + ' ', 'background: #722ed1; color: white; padding: 3px 8px; border-radius: 3px;');
 console.log('%c 防盗标识: ' + _COPYRIGHT_INFO.author + ' ', 'background: #f5222d; color: white; padding: 3px 8px; border-radius: 3px;');
 
 // Ant Design 主题配置 - 完全禁用动态样式和高对比度

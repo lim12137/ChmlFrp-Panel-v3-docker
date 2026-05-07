@@ -33,7 +33,7 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import axios from '../utils/auth';
-import { saveAuthData, clearAuthStorage, getLegacyToken } from '../utils/auth';
+import { saveAuthData, clearAuthStorage, getAuthorizationToken } from '../utils/auth';
 import { getUserInfo } from '../utils/auth';
 
 const { Title, Text } = Typography;
@@ -202,7 +202,7 @@ const UserProfile = () => {
 
   // 执行签到的核心函数
   const performSignIn = async (silent = false) => {
-    const currentToken = getLegacyToken();
+    const currentToken = getAuthorizationToken();
     const signInMethods = [
       // 方法1: 仅使用token
       () => axios.post('/qiandao', {

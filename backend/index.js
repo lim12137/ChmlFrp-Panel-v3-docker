@@ -470,52 +470,6 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
 // API路由定义
 
 // 1. 用户认证相关
-// 自定义登录处理器，支持登录信息保存
-app.get('/api/login', async (req, res) => {
-    try {
-        // 首先调用原始的登录API
-        const response = await upstreamAxios.get(`${CHMLFRP_API_BASE}/login`, {
-            params: req.query,
-            headers: {
-                'User-Agent': 'ChmlFrp-Docker/1.0.0',
-                'Accept': 'application/json'
-            }
-        });
-        
-        // 如果登录成功，保存登录信息
-        if (response.data && response.data.code === 200 && response.data.data) {
-            const { username, password } = req.query;
-            // ChmlFrp API 使用 usertoken 字段
-            const token = response.data.data.usertoken || response.data.data.token;
-            
-            console.log('登录响应数据:', JSON.stringify(response.data, null, 2));
-            console.log('提取的token:', token);
-            
-            if (token) {
-                // 保存登录信息以供重启后使用
-                saveLoginInfo({
-                    username,
-                    password,
-                    token,
-                    usertoken: token
-                });
-                console.log(`用户 ${username} 登录成功，登录信息已保存`);
-            } else {
-                console.log('警告: 登录成功但未找到token字段');
-            }
-        }
-        
-        res.json(response.data);
-    } catch (error) {
-        console.error('登录处理失败:', error.message);
-        res.status(500).json({
-            code: -1,
-            state: "error",
-            msg: "登录处理失败",
-            data: null
-        });
-    }
-});
 app.get('/api/register', (req, res) => proxyToChmlFrp(req, res, '/register')); // 修复：与官方API一致使用GET
 app.post('/api/sendmailcode', (req, res) => proxyToChmlFrp(req, res, '/sendmailcode', 'POST')); // 修复：与官方API一致使用POST
 app.get('/api/userinfo', (req, res) => proxyToChmlFrp(req, res, '/userinfo'));
@@ -721,69 +675,6 @@ app.get('/api/check_login_status', async (req, res) => {
     }
 });
 
-// Token登录API - 允许用户直接使用token登录
-app.post('/api/login_with_token', async (req, res) => {
-    try {
-        const { username, token } = req.body;
-        
-        if (!username || !token) {
-            return res.status(400).json({
-                code: -1,
-                state: 'error',
-                msg: '用户名和token不能为空',
-                data: null
-            });
-        }
-        
-        console.log(`尝试使用token登录: ${username}`);
-        
-        // 验证token是否有效
-        const response = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
-            params: { token },
-            headers: {
-                'User-Agent': 'ChmlFrp-Docker/1.0.0',
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (response.data && response.data.code === 200) {
-            // Token有效，保存登录信息
-            saveLoginInfo({
-                username,
-                password: '',
-                token,
-                usertoken: token
-            }); // 密码留空
-            
-            console.log(`Token登录成功: ${username}`);
-            
-            res.json({
-                code: 200,
-                state: 'success',
-                msg: 'Token登录成功',
-                data: {
-                    usertoken: token,
-                    username: username
-                }
-            });
-        } else {
-            res.status(401).json({
-                code: -1,
-                state: 'error',
-                msg: 'Token无效或已过期',
-                data: null
-            });
-        }
-    } catch (error) {
-        console.error('Token登录失败:', error.message);
-        res.status(500).json({
-            code: -1,
-            state: 'error',
-            msg: 'Token登录失败',
-            data: null
-        });
-    }
-});
 app.get('/api/retoken', (req, res) => proxyToChmlFrp(req, res, '/retoken'));
 app.post('/api/qiandao', (req, res) => proxyToChmlFrp(req, res, '/qiandao', 'POST'));
 app.get('/api/reset_password', (req, res) => proxyToChmlFrp(req, res, '/reset_password')); // 修复：与官方API一致使用GET

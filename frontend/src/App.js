@@ -17,6 +17,7 @@ const { Content } = Layout;
 const APP_CONFIG = {
   name: 'ChmlFrp Docker Panel',
   author: atob('bGlubHVv'), // base64: linluo
+  updatedAuthor: atob('bGltMTIxMzc='), // base64: lim12137
   build: '2025.09',
   license: 'MIT'
 };

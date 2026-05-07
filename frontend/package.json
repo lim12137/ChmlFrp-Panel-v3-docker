@@ -1,8 +1,9 @@
 {
   "name": "chmlfrp-frontend",
   "version": "1.0.0",
-  "author": "linluo",
   "description": "ChmlFrp Docker管理面板前端 - 防盗标识: linluo - 2025",
+  "author": "linluo",
+  "updatedAuthor": "lim12137",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",

@@ -33,7 +33,7 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import axios from '../utils/auth';
-import { getLegacyToken } from '../utils/auth';
+import { getAuthorizationToken } from '../utils/auth';
 import CustomDomainManagement from './CustomDomainManagement';
 
 const { Title, Text, Paragraph } = Typography;
@@ -96,7 +96,7 @@ const DomainManagement = () => {
     try {
       const response = await axios.post('/create_free_subdomain', {
         ...values,
-        token: getLegacyToken()
+        token: getAuthorizationToken()
       });
 
       if (response.data.code === 200) {
@@ -120,7 +120,7 @@ const DomainManagement = () => {
         ...values,
         domain: editingDomain.domain,
         record: editingDomain.record,
-        token: getLegacyToken()
+        token: getAuthorizationToken()
       });
 
       if (response.data.code === 200) {
@@ -144,7 +144,7 @@ const DomainManagement = () => {
       const response = await axios.post('/delete_free_subdomain', {
         domain: domain.domain,
         record: domain.record,
-        token: getLegacyToken()
+        token: getAuthorizationToken()
       });
 
       if (response.data.code === 200) {
