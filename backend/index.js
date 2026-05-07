@@ -31,6 +31,7 @@ const CHMLFRP_API_BASE = process.env.CHMLFRP_API_BASE || 'http://cf-v2.uapis.cn'
 const ACCOUNT_OAUTH_ISSUER = process.env.ACCOUNT_OAUTH_ISSUER || 'https://account-api.qzhua.net';
 const ACCOUNT_OAUTH_CLIENT_ID = process.env.ACCOUNT_OAUTH_CLIENT_ID || '019d4334b34972ca9fd41513e5703dfd';
 const ACCOUNT_OAUTH_CLIENT_SECRET = process.env.ACCOUNT_OAUTH_CLIENT_SECRET || '';
+const upstreamAxios = axios.create();
 
 // 记录程序启动时间
 const SERVER_START_TIME = new Date();
@@ -114,35 +115,6 @@ function extractLegacyUserToken(userInfo = {}) {
         || null;
 }
 
-async function fetchOAuthUserInfo(accessToken) {
-    const endpointCandidates = [
-        `${ACCOUNT_OAUTH_ISSUER}/userinfo`,
-        `${ACCOUNT_OAUTH_ISSUER}/oauth2/userinfo`
-    ];
-
-    let lastError = null;
-    for (const url of endpointCandidates) {
-        try {
-            const response = await axios.get(url, {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    Accept: 'application/json'
-                },
-                timeout: 15000
-            });
-            return response.data;
-        } catch (error) {
-            lastError = error;
-            const status = error.response?.status;
-            if (status && status !== 404 && status !== 405) {
-                throw error;
-            }
-        }
-    }
-
-    throw lastError || new Error('获取 OAuth 用户信息失败');
-}
-
 async function refreshOAuthAccessToken(refreshToken) {
     const body = new URLSearchParams();
     body.set('grant_type', 'refresh_token');
@@ -160,7 +132,7 @@ async function refreshOAuthAccessToken(refreshToken) {
         headers.Authorization = `Basic ${Buffer.from(`${ACCOUNT_OAUTH_CLIENT_ID}:${ACCOUNT_OAUTH_CLIENT_SECRET}`).toString('base64')}`;
     }
 
-    const response = await axios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/token`, body.toString(), {
+    const response = await upstreamAxios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/token`, body.toString(), {
         headers,
         timeout: 15000
     });
@@ -186,7 +158,7 @@ async function fetchChmlFrpUserInfo({ accessToken, legacyToken }) {
         config.headers.Authorization = `Bearer ${legacyToken}`;
     }
 
-    const response = await axios(config);
+    const response = await upstreamAxios(config);
     return response.data;
 }
 
@@ -377,7 +349,7 @@ async function proxyToChmlFrpAsync(req, endpoint, method = 'GET') {
             }
         }
 
-        const response = await axios(config);
+        const response = await upstreamAxios(config);
         return response.data;
     } catch (error) {
         console.error('代理请求失败:', error.message);
@@ -450,7 +422,7 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
             }
         }
 
-        const response = await axios(config);
+        const response = await upstreamAxios(config);
         console.log(`[${new Date().toISOString()}] 响应状态: ${response.status}, 数据: ${JSON.stringify(response.data).substring(0, 100)}...`);
         res.json(response.data);
     } catch (error) {
@@ -501,7 +473,7 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
 app.get('/api/login', async (req, res) => {
     try {
         // 首先调用原始的登录API
-        const response = await axios.get(`${CHMLFRP_API_BASE}/login`, {
+        const response = await upstreamAxios.get(`${CHMLFRP_API_BASE}/login`, {
             params: req.query,
             headers: {
                 'User-Agent': 'ChmlFrp-Docker/1.0.0',
@@ -554,7 +526,7 @@ app.post('/api/oauth/device_authorization', async (req, res) => {
         body.set('client_id', ACCOUNT_OAUTH_CLIENT_ID);
         body.set('scope', scope);
 
-        const response = await axios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/device_authorization`, body.toString(), {
+        const response = await upstreamAxios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/device_authorization`, body.toString(), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json'
@@ -607,7 +579,7 @@ app.post('/api/oauth/device_token', async (req, res) => {
             headers.Authorization = `Basic ${Buffer.from(`${ACCOUNT_OAUTH_CLIENT_ID}:${ACCOUNT_OAUTH_CLIENT_SECRET}`).toString('base64')}`;
         }
 
-        const response = await axios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/token`, body.toString(), {
+        const response = await upstreamAxios.post(`${ACCOUNT_OAUTH_ISSUER}/oauth2/token`, body.toString(), {
             headers,
             timeout: 15000,
             validateStatus: () => true
@@ -646,32 +618,37 @@ app.post('/api/login_with_access_token', async (req, res) => {
             });
         }
 
-        let oauthUserInfo;
+        let userInfoResponse;
         try {
-            oauthUserInfo = await fetchOAuthUserInfo(accessToken);
+            userInfoResponse = await fetchChmlFrpUserInfo({ accessToken });
         } catch (error) {
             return res.status(error.response?.status || 401).json({
                 code: -1,
                 state: 'error',
-                msg: error.response?.data?.error_description || error.response?.data?.error || 'OAuth Access Token无效',
+                msg: error.response?.data?.msg || error.response?.data?.error_description || error.response?.data?.error || 'Access Token无效',
                 data: null
             });
         }
-        const legacyToken = extractLegacyUserToken(oauthUserInfo);
-        const userInfoResponse = legacyToken
-            ? await fetchChmlFrpUserInfo({ legacyToken })
-            : null;
 
-        if (!legacyToken || !userInfoResponse || userInfoResponse.code !== 200 || !userInfoResponse.data) {
+        if (!userInfoResponse || userInfoResponse.code !== 200 || !userInfoResponse.data) {
             return res.status(401).json({
                 code: -1,
                 state: 'error',
-                msg: legacyToken ? (userInfoResponse?.msg || 'Access Token无效') : 'OAuth登录成功，但未获取到可用于 ChmlFrp 的 usertoken',
+                msg: userInfoResponse?.msg || 'Access Token无效',
                 data: null
             });
         }
 
         const userInfo = userInfoResponse.data;
+        const legacyToken = extractLegacyUserToken(userInfoResponse) || userInfo.usertoken || null;
+        if (!legacyToken) {
+            return res.status(401).json({
+                code: -1,
+                state: 'error',
+                msg: 'OAuth登录成功，但未获取到可用于 ChmlFrp 的 usertoken',
+                data: null
+            });
+        }
         saveLoginInfo({
             username: userInfo.username,
             password: '',
@@ -760,7 +737,7 @@ app.post('/api/login_with_token', async (req, res) => {
         console.log(`尝试使用token登录: ${username}`);
         
         // 验证token是否有效
-        const response = await axios.get(`${CHMLFRP_API_BASE}/userinfo`, {
+        const response = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
             params: { token },
             headers: {
                 'User-Agent': 'ChmlFrp-Docker/1.0.0',
@@ -917,7 +894,7 @@ app.post('/api/delete_tunnel', async (req, res) => {
 
         console.log('发送到ChmlFrp的请求配置:', JSON.stringify(config, null, 2));
         
-        const response = await axios(config);
+        const response = await upstreamAxios(config);
         res.json(response.data);
     } catch (error) {
         console.error('删除隧道代理失败:', error.response?.data || error.message);
@@ -956,7 +933,7 @@ app.post('/api/update_tunnel', async (req, res) => {
         // 首先获取用户信息来得到userid
         let userid = 35803; // 默认值
         try {
-            const userInfoResponse = await axios.get(`${CHMLFRP_API_BASE}/userinfo`, {
+            const userInfoResponse = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
                 params: { token: token },
                 timeout: 10000
             });
@@ -1808,7 +1785,7 @@ app.post('/api/reset_token', async (req, res) => {
         }
         
         // 调用ChmlFrp的用户信息接口验证token并获取用户信息
-        const userInfoResponse = await axios.get(`${CHMLFRP_API_BASE}/userinfo`, {
+        const userInfoResponse = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
             params: { token: currentToken },
             timeout: 30000
         });
@@ -1826,7 +1803,7 @@ app.post('/api/reset_token', async (req, res) => {
         console.log('Token重置请求 - 用户ID:', userInfoResponse.data.data.id);
         
         try {
-            const resetResponse = await axios.get(`${CHMLFRP_API_BASE}/retoken`, {
+            const resetResponse = await upstreamAxios.get(`${CHMLFRP_API_BASE}/retoken`, {
                 params: { token: currentToken },
                 timeout: 30000
             });
@@ -1847,7 +1824,7 @@ app.post('/api/reset_token', async (req, res) => {
                 } else {
                     // 如果响应中没有新token，尝试重新获取用户信息
                     try {
-                        const newUserInfoResponse = await axios.get(`${CHMLFRP_API_BASE}/userinfo`, {
+                        const newUserInfoResponse = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
                             params: { token: currentToken },
                             timeout: 30000
                         });
