@@ -440,14 +440,14 @@ proxies:`;
     }
 
     // 为单个隧道生成YAML配置
-    generateSingleTunnelConfig(tunnel, nodeToken, serverAddr = null, authToken = null) {
+    generateSingleTunnelConfig(tunnel, nodeToken, serverAddr = null, authToken = null, serverPort = null) {
         const finalServerAddr = serverAddr || ((tunnel.ip && typeof tunnel.ip === 'string') ? (tunnel.ip.replace(/^https?:\/\//, '').split(':')[0]) : (tunnel.node_ip || 'cf-v2.uapis.cn'));
-        const serverPort = 7000;
+        const finalServerPort = serverPort || 7000;
         // 使用实际的验证token，如果没有则使用节点默认token
         const finalAuthToken = authToken || 'chmlfrp_token';
         let config = `# FRP客户端配置 - 隧道 ${tunnel.name}
 serverAddr: ${finalServerAddr}
-serverPort: ${serverPort}
+serverPort: ${finalServerPort}
 user: ${nodeToken}
 
 # 身份验证配置
@@ -513,15 +513,15 @@ proxies:
     // 删除硬编码的节点映射，改用ChmlFrp官方API获取实际配置
 
     // 为单个隧道生成INI配置（兼容性更好）
-    generateSingleTunnelConfigINI(tunnel, nodeToken, serverAddr = null, authToken = null) {
+    generateSingleTunnelConfigINI(tunnel, nodeToken, serverAddr = null, authToken = null, serverPort = null) {
         console.log(`[配置生成] 隧道${tunnel.name}完整数据:`, JSON.stringify(tunnel, null, 2));
         const finalServerAddr = serverAddr || 'sj.frp.one';
-        const serverPort = 7000;
+        const finalServerPort = serverPort || 7000;
         const finalAuthToken = authToken || 'MISSING_AUTH_TOKEN'; // 明确显示authToken缺失问题
 
         let config = `[common]
 server_addr = ${finalServerAddr}
-server_port = ${serverPort}
+server_port = ${finalServerPort}
 tcp_mux = true
 protocol = tcp
 user = ${nodeToken}
@@ -700,6 +700,7 @@ use_compression = false
 
             // 使用ChmlFrp官方API获取正确的服务器配置
             let serverAddr = 'sj.frp.one'; // 默认值
+            let serverPort = 7000; // 默认值
             let nodeToken = ''; // 用户标识符，从API配置获取
             let authToken = 'ChmlFrpToken'; // 默认FRP认证token
 
@@ -730,41 +731,24 @@ use_compression = false
                         serverAddr = serverAddrMatch[1].trim();
                         this.addLog(`[配置解析] 服务器地址: ${serverAddr}`, 'INFO');
                     }
+
+                    const serverPortMatch = configData.match(/server_port\s*=\s*(\d+)/);
+                    if (serverPortMatch) {
+                        serverPort = Number(serverPortMatch[1]);
+                        this.addLog(`[配置解析] 服务器端口: ${serverPort}`, 'INFO');
+                    }
+
+                    const userTokenMatch = configData.match(/user\s*=\s*([^\n\r]+)/);
+                    if (userTokenMatch) {
+                        nodeToken = userTokenMatch[1].trim();
+                        this.addLog(`[配置解析] 用户标识符: ${nodeToken}`, 'INFO');
+                    }
                     
                     // 解析 frp 认证 token
                     const tokenMatch = configData.match(/token\s*=\s*([^\n\r]+)/);
                     if (tokenMatch) {
                         authToken = tokenMatch[1].trim();
                         this.addLog(`[配置解析] 认证token: ${authToken}`, 'INFO');
-                    }
-
-                    // 优先使用 OAuth /user info 中的 sso_user_uuid 作为 user 字段
-                    try {
-                        const userInfoResp = await axios.get('https://cf-v2.uapis.cn/userinfo', {
-                            headers: {
-                                Authorization: `Bearer ${userToken}`,
-                                Accept: 'application/json',
-                                'User-Agent': 'ChmlFrp-Docker-Manager/1.0'
-                            },
-                            timeout: 10000
-                        });
-                        const userInfo = userInfoResp.data?.data || {};
-                        const preferredNodeToken = userInfo.sso_user_uuid || userInfo.useruuid || userInfo.uuid || userInfo.usertoken || null;
-                        if (preferredNodeToken) {
-                            nodeToken = preferredNodeToken;
-                            this.addLog(`[配置解析] 优先使用用户UUID: ${nodeToken}`, 'INFO');
-                        }
-                    } catch (userInfoError) {
-                        this.addLog(`[配置解析] 获取用户UUID失败，继续使用配置中的user字段: ${userInfoError.message}`, 'WARN');
-                    }
-
-                    // 解析用户标识符（user字段），仅作为兜底
-                    if (!nodeToken) {
-                        const userTokenMatch = configData.match(/user\s*=\s*([^\n\r]+)/);
-                        if (userTokenMatch) {
-                            nodeToken = userTokenMatch[1].trim();
-                            this.addLog(`[配置解析] 用户标识符(兜底): ${nodeToken}`, 'INFO');
-                        }
                     }
                 } else {
                     this.addLog(`[API错误] 响应异常: ${JSON.stringify(configResponse.data)}`, 'ERROR');
@@ -860,7 +844,7 @@ use_compression = false
                 dorp: effectiveTunnel.dorp,
                 domain: effectiveTunnel.domain
             }));
-            const configContent = this.generateSingleTunnelConfigINI(effectiveTunnel, nodeToken, serverAddr, authToken);
+            const configContent = this.generateSingleTunnelConfigINI(effectiveTunnel, nodeToken, serverAddr, authToken, serverPort);
             const configPath = path.join(this.configDir, `tunnel_${tunnel.id}.ini`);
 
             // 验证配置内容
@@ -872,7 +856,7 @@ use_compression = false
             // 写入配置文件
             fs.writeFileSync(configPath, configContent, 'utf8');
             console.log(`配置文件已生成: ${configPath}`);
-            console.log(`配置详情: server=${serverAddr}, user=${nodeToken}, token=${authToken}`);
+            console.log(`配置详情: server=${serverAddr}:${serverPort}, user=${nodeToken}, token=${authToken}`);
 
             // 启动FRP进程
             const frpProcess = spawn(this.frpBinaryPath, ['-c', configPath], {
