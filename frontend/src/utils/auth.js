@@ -63,7 +63,7 @@ export const getLegacyToken = () => readAuthInfo()?.usertoken || localStorage.ge
 
 export const getAccessToken = () => readAuthInfo()?.accessToken || null;
 
-export const getAuthorizationToken = () => getLegacyToken() || getAccessToken();
+export const getAuthorizationToken = () => getAccessToken() || getLegacyToken();
 
 export const getAuthorizationHeader = () => {
   const token = getAuthorizationToken();

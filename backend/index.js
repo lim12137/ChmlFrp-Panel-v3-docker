@@ -197,22 +197,23 @@ async function getSavedLoginInfo() {
 async function resolveAuthContext(req) {
     const savedLogin = await getSavedLoginInfo();
     const requestToken = extractBearerToken(req.headers.authorization);
-    const legacyToken = requestToken || savedLogin?.usertoken || savedLogin?.token || null;
+    const accessToken = requestToken || savedLogin?.accessToken || null;
+    const legacyToken = savedLogin?.usertoken || savedLogin?.token || null;
 
-    if (legacyToken) {
+    if (accessToken) {
         return {
-            mode: savedLogin?.accessToken ? 'oauth' : 'legacy',
-            authorizationHeader: `Bearer ${legacyToken}`,
-            queryToken: legacyToken,
+            mode: 'oauth',
+            authorizationHeader: `Bearer ${accessToken}`,
+            queryToken: accessToken,
             savedLogin
         };
     }
 
-    if (savedLogin?.accessToken) {
+    if (legacyToken) {
         return {
-            mode: 'oauth',
-            authorizationHeader: `Bearer ${savedLogin.accessToken}`,
-            queryToken: null,
+            mode: 'legacy',
+            authorizationHeader: `Bearer ${legacyToken}`,
+            queryToken: legacyToken,
             savedLogin
         };
     }
