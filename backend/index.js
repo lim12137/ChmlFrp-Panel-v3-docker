@@ -808,12 +808,14 @@ app.post('/api/update_tunnel', async (req, res) => {
         const { tunnelid, tunnelname, node, localip, porttype, localport, remoteport, banddomain, encryption, compression } = req.body;
         
         const authContext = await getRequestAuthContext(req);
-        let token = authContext.queryToken;
+        const accessToken = authContext.savedLogin?.accessToken || extractBearerToken(req.headers.authorization) || null;
+        let token = authContext.savedLogin?.usertoken || authContext.savedLogin?.token || null;
         
-        console.log(`[${new Date().toISOString()}] 使用的token:`, token);
+        console.log(`[${new Date().toISOString()}] 使用的accessToken:`, accessToken ? 'present' : 'missing');
+        console.log(`[${new Date().toISOString()}] 初始legacy token:`, token);
         console.log(`[${new Date().toISOString()}] 请求体:`, JSON.stringify(req.body, null, 2));
-        
-        if (!token) {
+
+        if (!accessToken && !token) {
             return res.status(400).json({
                 code: 400,
                 state: 'error',
@@ -826,14 +828,30 @@ app.post('/api/update_tunnel', async (req, res) => {
         let userid = 35803; // 默认值
         try {
             const userInfoResponse = await upstreamAxios.get(`${CHMLFRP_API_BASE}/userinfo`, {
-                params: { token: token },
+                headers: accessToken ? {
+                    Authorization: `Bearer ${accessToken}`,
+                    Accept: 'application/json'
+                } : {
+                    Accept: 'application/json'
+                },
+                params: accessToken ? undefined : { token },
                 timeout: 10000
             });
             if (userInfoResponse.data.code === 200) {
                 userid = userInfoResponse.data.data.id;
+                token = userInfoResponse.data.data.usertoken || userInfoResponse.data.data.token || token;
             }
         } catch (error) {
-            console.log('获取用户信息失败，使用默认userid');
+            console.log('获取用户信息失败，使用默认userid和当前token');
+        }
+
+        if (!token) {
+            return res.status(401).json({
+                code: 401,
+                state: 'error',
+                msg: '无法获取可用于改隧道的 usertoken',
+                data: null
+            });
         }
         
         const v1Data = {

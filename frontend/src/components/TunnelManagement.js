@@ -497,7 +497,7 @@ const TunnelManagement = () => {
       }
 
       // 获取选中的节点信息
-      const selectedNode = nodes.find(n => n.id === values.node);
+      const selectedNode = nodes.find(n => String(n.id) === String(values.node));
       if (!selectedNode || !selectedNode.ip) {
         console.log('未获取到节点信息，无法更新隧道配置');
         return;
@@ -680,7 +680,7 @@ const TunnelManagement = () => {
     } catch (error) {
       console.error('DNS配置同步失败:', error);
       // 获取选中的节点信息来显示手动配置提示
-      const selectedNode = nodes.find(n => n.id === values.node);
+      const selectedNode = nodes.find(n => String(n.id) === String(values.node));
       if (selectedNode && selectedNode.ip) {
         message.warning(`自动配置失败，请手动将您的 ${domain} 域名通过CNAME解析至 ${selectedNode.ip} 才能正常访问`);
       }
@@ -694,7 +694,7 @@ const TunnelManagement = () => {
       // 将表单字段映射为API需要的字段
       const porttype = String(values.type || '').toLowerCase();
       const nodeName = (() => {
-        const match = nodes.find(n => n.id === values.node);
+        const match = nodes.find(n => String(n.id) === String(values.node));
         return match ? match.name : values.node;
       })();
 

@@ -731,18 +731,40 @@ use_compression = false
                         this.addLog(`[配置解析] 服务器地址: ${serverAddr}`, 'INFO');
                     }
                     
-                    // 解析用户标识符（user字段）
-                    const userTokenMatch = configData.match(/user\s*=\s*([^\n\r]+)/);
-                    if (userTokenMatch) {
-                        nodeToken = userTokenMatch[1].trim();
-                        this.addLog(`[配置解析] 用户标识符: ${nodeToken}`, 'INFO');
-                    }
-                    
                     // 解析 frp 认证 token
                     const tokenMatch = configData.match(/token\s*=\s*([^\n\r]+)/);
                     if (tokenMatch) {
                         authToken = tokenMatch[1].trim();
                         this.addLog(`[配置解析] 认证token: ${authToken}`, 'INFO');
+                    }
+
+                    // 优先使用 OAuth /user info 中的 sso_user_uuid 作为 user 字段
+                    try {
+                        const userInfoResp = await axios.get('https://cf-v2.uapis.cn/userinfo', {
+                            headers: {
+                                Authorization: `Bearer ${userToken}`,
+                                Accept: 'application/json',
+                                'User-Agent': 'ChmlFrp-Docker-Manager/1.0'
+                            },
+                            timeout: 10000
+                        });
+                        const userInfo = userInfoResp.data?.data || {};
+                        const preferredNodeToken = userInfo.sso_user_uuid || userInfo.useruuid || userInfo.uuid || userInfo.usertoken || null;
+                        if (preferredNodeToken) {
+                            nodeToken = preferredNodeToken;
+                            this.addLog(`[配置解析] 优先使用用户UUID: ${nodeToken}`, 'INFO');
+                        }
+                    } catch (userInfoError) {
+                        this.addLog(`[配置解析] 获取用户UUID失败，继续使用配置中的user字段: ${userInfoError.message}`, 'WARN');
+                    }
+
+                    // 解析用户标识符（user字段），仅作为兜底
+                    if (!nodeToken) {
+                        const userTokenMatch = configData.match(/user\s*=\s*([^\n\r]+)/);
+                        if (userTokenMatch) {
+                            nodeToken = userTokenMatch[1].trim();
+                            this.addLog(`[配置解析] 用户标识符(兜底): ${nodeToken}`, 'INFO');
+                        }
                     }
                 } else {
                     this.addLog(`[API错误] 响应异常: ${JSON.stringify(configResponse.data)}`, 'ERROR');
