@@ -44,6 +44,9 @@ import { getAuthorizationHeader, getAuthorizationToken } from '../utils/auth';
 const { Title } = Typography;
 const { Option } = Select;
 
+const normalizeTunnelId = (id) => String(id);
+const isTunnelEnabled = (tunnel) => String(tunnel?.state).toLowerCase() === 'true';
+
 const TunnelManagement = () => {
   const [tunnels, setTunnels] = useState([]);
   const [nodes, setNodes] = useState([]);
@@ -53,6 +56,7 @@ const TunnelManagement = () => {
   const [form] = Form.useForm();
   const [frpStatus, setFrpStatus] = useState(null);
   const [activeTunnelIds, setActiveTunnelIds] = useState(new Set());
+  const [stoppedTunnelIds, setStoppedTunnelIds] = useState(new Set());
   
   // FRP日志和重启相关状态
   const [logModalVisible, setLogModalVisible] = useState(false);
@@ -188,7 +192,17 @@ const TunnelManagement = () => {
     try {
       const response = await axios.get('/tunnel');
       if (response.data.code === 200) {
-        setTunnels(response.data.data || []);
+        const nextTunnels = response.data.data || [];
+        setTunnels(nextTunnels);
+        setStoppedTunnelIds(prevIds => {
+          const nextIds = new Set(prevIds);
+          nextTunnels.forEach(tunnel => {
+            if (!isTunnelEnabled(tunnel)) {
+              nextIds.delete(normalizeTunnelId(tunnel.id));
+            }
+          });
+          return nextIds;
+        });
       }
     } catch (error) {
       message.error('加载隧道列表失败');
@@ -245,7 +259,7 @@ const TunnelManagement = () => {
         setFrpStatus(response.data.data);
         // 更新活跃隧道ID集合
         const activeIds = new Set(
-          response.data.data.activeTunnels?.map(tunnel => tunnel.tunnelId) || []
+          response.data.data.activeTunnels?.map(tunnel => normalizeTunnelId(tunnel.tunnelId)) || []
         );
         setActiveTunnelIds(activeIds);
       }
@@ -307,7 +321,9 @@ const TunnelManagement = () => {
         return;
       }
       
-      const isCurrentlyActive = activeTunnelIds.has(tunnelId);
+      const normalizedTunnelId = normalizeTunnelId(tunnelId);
+      const isCurrentlyActive = activeTunnelIds.has(normalizedTunnelId)
+        || (!stoppedTunnelIds.has(normalizedTunnelId) && isTunnelEnabled(tunnel));
       
       if (isCurrentlyActive) {
         // 停用隧道 - 停止FRP进程
@@ -317,7 +333,9 @@ const TunnelManagement = () => {
         
         if (response.data.code === 200) {
           message.success('隧道已停用，内网穿透已停止');
+          setStoppedTunnelIds(prevIds => new Set([...prevIds, normalizedTunnelId]));
           loadFrpStatus(); // 更新FRP状态
+          loadTunnels(); // 更新隧道列表中的运行状态
         } else {
           message.error(response.data.msg);
         }
@@ -333,7 +351,13 @@ const TunnelManagement = () => {
         
         if (response.data.code === 200) {
           message.success(`内网穿透已启动！${tunnel.localip}:${tunnel.nport} 现在可以通过外网访问`);
+          setStoppedTunnelIds(prevIds => {
+            const nextIds = new Set(prevIds);
+            nextIds.delete(normalizedTunnelId);
+            return nextIds;
+          });
           loadFrpStatus(); // 更新FRP状态
+          loadTunnels(); // 更新隧道列表中的运行状态
         } else {
           message.error(`启动失败: ${response.data.msg}`);
         }
@@ -440,7 +464,7 @@ const TunnelManagement = () => {
         message.success('删除成功');
         
         // 如果删除的隧道正在运行，同时停止FRP进程
-        if (activeTunnelIds.has(tunnelId)) {
+        if (activeTunnelIds.has(normalizeTunnelId(tunnelId))) {
           await axios.post('/frp/stop-tunnel', { tunnelId });
           await loadFrpStatus();
         }
@@ -802,7 +826,9 @@ const TunnelManagement = () => {
       title: '状态',
       key: 'status',
       render: (_, record) => {
-        const isLocallyActive = activeTunnelIds.has(record.id);
+        const normalizedTunnelId = normalizeTunnelId(record.id);
+        const isLocallyActive = activeTunnelIds.has(normalizedTunnelId)
+          || (!stoppedTunnelIds.has(normalizedTunnelId) && isTunnelEnabled(record));
         const nodeOnline = record.nodestate === 'online';
         
         if (isLocallyActive && nodeOnline) {
@@ -847,16 +873,23 @@ const TunnelManagement = () => {
       key: 'action',
       render: (_, record) => (
         <Space>
-          <Tooltip title={activeTunnelIds.has(record.id) ? '停用隧道' : '启用隧道'}>
+          {(() => {
+            const normalizedTunnelId = normalizeTunnelId(record.id);
+            const isActive = activeTunnelIds.has(normalizedTunnelId)
+              || (!stoppedTunnelIds.has(normalizedTunnelId) && isTunnelEnabled(record));
+            return (
+          <Tooltip title={isActive ? '停用隧道' : '启用隧道'}>
             <Button
               type="link"
-              icon={activeTunnelIds.has(record.id) ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              icon={isActive ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
               onClick={() => toggleTunnelState(record.id)}
-              style={{ color: activeTunnelIds.has(record.id) ? '#ff4d4f' : '#52c41a' }}
+              style={{ color: isActive ? '#ff4d4f' : '#52c41a' }}
             >
-              {activeTunnelIds.has(record.id) ? '停用' : '启用'}
+              {isActive ? '停用' : '启用'}
             </Button>
           </Tooltip>
+            );
+          })()}
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -880,7 +913,10 @@ const TunnelManagement = () => {
   ];
 
   // 计算实际活跃的隧道数量（基于本地FRP进程状态）
-  const activeLocalTunnels = activeTunnelIds.size;
+  const activeLocalTunnels = tunnels.filter(tunnel =>
+    activeTunnelIds.has(normalizeTunnelId(tunnel.id))
+      || (!stoppedTunnelIds.has(normalizeTunnelId(tunnel.id)) && isTunnelEnabled(tunnel))
+  ).length;
   const isRunning = frpStatus?.isRunning;
 
   return (
