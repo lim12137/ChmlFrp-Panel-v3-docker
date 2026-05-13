@@ -55,3 +55,71 @@
 - 本地源码级验证中，前端生产构建通过，后端可启动并通过基础健康接口验证。
 - 自动化测试覆盖不足：前端无测试文件，后端无 `test` 脚本。
 - Docker 路径需先启动/修复 Docker Desktop Linux Engine 后，再执行 `docker build -t chmlfrp-panel-local-test -f Dockerfile .` 或改用带 `build:` 的 Compose 配置进行完整容器验证。
+
+---
+
+## 追加记录：本地开发服务拉起（不用镜像）
+
+### 本次要求
+
+- 不使用 Docker / 镜像。
+- 基于源码安装依赖并启动后端、前端本地开发服务。
+- 服务尽量保持后台运行，并记录访问地址、进程信息、日志文件路径。
+- 验证后端健康/登录状态接口、前端首页可达性。
+
+### 启动命令
+
+| 步骤 | 命令 | 结果摘要 |
+| --- | --- | --- |
+| 1 | `cd backend; npm ci` | 成功，安装 122 个包。 |
+| 2 | `cd frontend; npm ci` | 成功，安装 1615 个包；存在 npm deprecated 警告。 |
+| 3 | `cd backend; npm run dev` | 成功，后端开发服务通过 `nodemon index.js` 后台运行，监听 `3001`。 |
+| 4 | `cd frontend; npm start` | 首次带 `HOST=127.0.0.1` 启动失败，报 `options.allowedHosts[0] should be a non-empty string`；清除 `HOST` 后重启成功，监听 `3000`。 |
+
+### 可访问地址
+
+- 后端 API：`http://localhost:3001`
+- 后端健康接口：`http://localhost:3001/api/health`
+- 后端登录状态接口：`http://localhost:3001/api/check_login_status`
+- 前端首页：`http://localhost:3000/`
+
+### 验证命令与结果
+
+| 验证项 | 命令 | 结果摘要 |
+| --- | --- | --- |
+| 后端健康接口 | `Invoke-WebRequest -Uri http://localhost:3001/api/health -UseBasicParsing -TimeoutSec 20` | HTTP `200`，返回 `ChmlFrp Docker Dashboard API运行正常`。 |
+| 后端登录状态 | `Invoke-WebRequest -Uri http://localhost:3001/api/check_login_status -UseBasicParsing -TimeoutSec 20` | HTTP `200`，返回 `未登录`，`isLoggedIn=false`，符合未配置登录信息的本地状态。 |
+| 前端首页 | `Invoke-WebRequest -Uri http://localhost:3000/ -UseBasicParsing -TimeoutSec 20` | HTTP `200`，返回 React 首页 HTML，页面可达。 |
+
+### 进程与端口
+
+| 服务 | 端口 | 监听地址 | 进程 |
+| --- | --- | --- | --- |
+| 后端 | `3001` | `::` | `node.exe` PID `7380` 监听端口；`nodemon` PID `7884`；父级 `cmd.exe` PID `16140`；`npm run dev` PID `19024` / `12520`。 |
+| 前端 | `3000` | `0.0.0.0` | `node.exe` PID `5368` 监听端口；`react-scripts` PID `2908`；父级 `cmd.exe` PID `5084`；`npm start` PID `12568`。 |
+
+### 日志文件
+
+- 后端标准输出：`M:\AI\1work\ChmlFrp\ChmlFrp-Panel-v3-docker\logs\backend-dev.out.log`
+- 后端错误输出：`M:\AI\1work\ChmlFrp\ChmlFrp-Panel-v3-docker\logs\backend-dev.err.log`
+- 前端标准输出：`M:\AI\1work\ChmlFrp\ChmlFrp-Panel-v3-docker\logs\frontend-dev.out.log`
+- 前端错误输出：`M:\AI\1work\ChmlFrp\ChmlFrp-Panel-v3-docker\logs\frontend-dev.err.log`
+
+### 如何停止服务
+
+```powershell
+Stop-Process -Id 7380,7884,16140,19024,12520,5368,2908,5084,12568 -Force
+```
+
+如进程号变化，可按端口查找后停止：
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 3000,3001 | Select-Object LocalPort,OwningProcess
+Stop-Process -Id <OwningProcess> -Force
+```
+
+### 结论
+
+- 本次按源码本地开发方式完成拉起，未使用 Docker / 镜像。
+- 后端健康接口、后端登录状态接口、前端首页均验证通过。
+- 服务当前保持后台运行，可直接访问 `http://localhost:3000/`。
