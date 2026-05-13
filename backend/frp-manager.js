@@ -12,12 +12,35 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
+function isDockerRuntime() {
+    return process.env.CHMLFRP_RUNTIME === 'docker'
+        || fs.existsSync('/.dockerenv')
+        || (process.platform !== 'win32' && fs.existsSync('/app/frpc'));
+}
+
+function redactSensitive(value) {
+    const text = typeof value === 'string' ? value : JSON.stringify(value);
+    return text
+        .replace(/(["']?(?:accessToken|refreshToken|usertoken|userToken|token|authorization|password|auth)["']?\s*[:=]\s*)["']?[^"',\s}]+["']?/gi, '$1[REDACTED]')
+        .replace(/((?:accessToken|refreshToken|usertoken|userToken|token)=)[^&\s"']+/gi, '$1[REDACTED]')
+        .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED]')
+        .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[REDACTED]');
+}
+
 class FrpManager {
     constructor() {
         this.activeTunnels = new Map(); // tunnelId -> { process, config }
-        this.frpBinaryPath = '/app/frpc';
-        this.configDir = '/app/configs';
-        this.stateFile = '/app/tunnel-state.json'; // 隧道状态持久化文件
+        const dockerRuntime = isDockerRuntime();
+        const localDataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+        const localBinaryName = process.platform === 'win32' ? 'frpc.exe' : 'frpc';
+        this.frpBinaryPath = process.env.FRP_BINARY_PATH
+            || process.env.FRPC_BINARY_PATH
+            || (dockerRuntime ? '/app/frpc' : path.join(__dirname, 'bin', localBinaryName));
+        this.configDir = process.env.FRP_CONFIG_DIR
+            || (dockerRuntime ? '/app/configs' : path.join(localDataDir, 'configs'));
+        this.stateFile = process.env.FRP_STATE_FILE
+            || (dockerRuntime ? '/app/tunnel-state.json' : path.join(localDataDir, 'tunnel-state.json')); // 隧道状态持久化文件
+        this.loginInfoFile = process.env.LOGIN_INFO_FILE || path.join(localDataDir, 'login_info.json');
         this.autoReconnectEnabled = true; // 启用自动重连
         this.reconnectInterval = 5000; // 重连间隔5秒
         this.maxReconnectAttempts = -1; // 无限重连尝试次数
@@ -27,7 +50,8 @@ class FrpManager {
         // 日志收集相关
         this.logBuffer = []; // 内存中的日志缓冲区
         this.maxLogLines = 1000; // 最大保存的日志行数
-        this.logFile = '/app/logs/frp.log'; // 日志文件路径
+        this.logFile = process.env.FRP_LOG_FILE
+            || (dockerRuntime ? '/app/logs/frp.log' : path.join(localDataDir, 'logs', 'frp.log')); // 日志文件路径
 
         // 确保日志目录存在
         this.ensureLogDirectory();
@@ -82,6 +106,18 @@ class FrpManager {
         }
     }
 
+    ensureFrpBinaryAvailable() {
+        if (fs.existsSync(this.frpBinaryPath)) {
+            return;
+        }
+
+        const error = new Error(
+            `FRP客户端程序不存在: ${this.frpBinaryPath}。请设置 FRP_BINARY_PATH 指向本机 frpc 可执行文件，或将 ${process.platform === 'win32' ? 'frpc.exe' : 'frpc'} 放到 backend/bin 目录。`
+        );
+        error.code = 'FRP_BINARY_NOT_FOUND';
+        throw error;
+    }
+
     // 记录日志到缓冲区和文件
     addLog(message, level = 'INFO') {
         const now = new Date();
@@ -94,7 +130,7 @@ class FrpManager {
             second: '2-digit',
             hour12: false
         });
-        const logEntry = `${timestamp} [${level}] ${message}`;
+        const logEntry = `${timestamp} [${level}] ${redactSensitive(message)}`;
 
         // 添加到内存缓冲区
         this.logBuffer.push(logEntry);
@@ -514,7 +550,7 @@ proxies:
 
     // 为单个隧道生成INI配置（兼容性更好）
     generateSingleTunnelConfigINI(tunnel, nodeToken, serverAddr = null, authToken = null, serverPort = null) {
-        console.log(`[配置生成] 隧道${tunnel.name}完整数据:`, JSON.stringify(tunnel, null, 2));
+        console.log(`[配置生成] 隧道${tunnel.name}完整数据:`, redactSensitive(JSON.stringify(tunnel, null, 2)));
         const finalServerAddr = serverAddr || 'sj.frp.one';
         const finalServerPort = serverPort || 7000;
         const finalAuthToken = authToken || 'MISSING_AUTH_TOKEN'; // 明确显示authToken缺失问题
@@ -697,6 +733,7 @@ use_compression = false
             }
 
             console.log(`启动隧道: ${tunnel.name} (${tunnel.localip}:${tunnel.nport})`);
+            this.ensureFrpBinaryAvailable();
 
             // 使用ChmlFrp官方API获取正确的服务器配置
             let serverAddr = 'sj.frp.one'; // 默认值
@@ -775,12 +812,12 @@ use_compression = false
             if (!nodeToken) {
                 // 首先尝试从登录信息文件读取用户token
                 try {
-                    const loginInfoPath = '/app/data/login_info.json';
+                    const loginInfoPath = this.loginInfoFile;
                     if (fs.existsSync(loginInfoPath)) {
                         const loginInfo = JSON.parse(fs.readFileSync(loginInfoPath, 'utf8'));
                         if (loginInfo.token) {
                             nodeToken = loginInfo.token;
-                            console.log(`使用登录信息中的用户token: ${nodeToken}`);
+                            console.log(redactSensitive(`使用登录信息中的用户token: ${nodeToken}`));
                         }
                     }
                 } catch (error) {
@@ -791,7 +828,7 @@ use_compression = false
                 if (!nodeToken) {
                     if (global.currentUserToken) {
                         nodeToken = global.currentUserToken;
-                        console.log(`使用全局用户token作为标识符: ${nodeToken}`);
+                        console.log(redactSensitive(`使用全局用户token作为标识符: ${nodeToken}`));
                     } else if (global.currentUsername) {
                         nodeToken = global.currentUsername;
                         console.log(`使用保存的用户名作为标识符: ${nodeToken}`);
@@ -850,13 +887,13 @@ use_compression = false
             // 验证配置内容
             if (!nodeToken || nodeToken === 'user_' + tunnel.id) {
                 console.warn(`警告: 隧道 ${tunnel.name} 使用了fallback用户标识符，可能导致连接失败`);
-                console.warn(`建议检查token配置: ${nodeToken}`);
+                console.warn(redactSensitive(`建议检查token配置: ${nodeToken}`));
             }
 
             // 写入配置文件
             fs.writeFileSync(configPath, configContent, 'utf8');
             console.log(`配置文件已生成: ${configPath}`);
-            console.log(`配置详情: server=${serverAddr}:${serverPort}, user=${nodeToken}, token=${authToken}`);
+            console.log(redactSensitive(`配置详情: server=${serverAddr}:${serverPort}, user=${nodeToken}, token=${authToken}`));
 
             // 启动FRP进程
             const frpProcess = spawn(this.frpBinaryPath, ['-c', configPath], {
@@ -868,6 +905,20 @@ use_compression = false
             let startupError = null;
 
             return new Promise((resolve, reject) => {
+                let settled = false;
+                const resolveOnce = (value) => {
+                    if (!settled) {
+                        settled = true;
+                        resolve(value);
+                    }
+                };
+                const rejectOnce = (error) => {
+                    if (!settled) {
+                        settled = true;
+                        reject(error);
+                    }
+                };
+
                 frpProcess.stdout.on('data', (data) => {
                     const output = data.toString().trim();
                     this.addLog(`[隧道${tunnel.id}] ${output}`, 'INFO');
@@ -896,7 +947,7 @@ use_compression = false
                             // 保存隧道状态
                             this.saveTunnelState();
 
-                            resolve({ success: true, message: `隧道 ${tunnel.name} 启动成功` });
+                            resolveOnce({ success: true, message: `隧道 ${tunnel.name} 启动成功` });
                         }
                     }
 
@@ -922,7 +973,7 @@ use_compression = false
                     this.saveTunnelState(); // 保存状态
 
                     if (!startupSuccess && code !== 0) {
-                        reject(new Error(`隧道启动失败，退出代码: ${code}${startupError ? ', 错误: ' + startupError : ''}`));
+                        rejectOnce(new Error(`隧道启动失败，退出代码: ${code}${startupError ? ', 错误: ' + startupError : ''}`));
                     }
                 });
 
@@ -930,12 +981,12 @@ use_compression = false
                     console.error(`隧道 ${tunnel.name} 进程错误:`, err);
                     this.activeTunnels.delete(tunnel.id);
                     this.saveTunnelState(); // 保存状态
-                    reject(err);
+                    rejectOnce(err);
                 });
 
                 // 5秒超时
                 setTimeout(() => {
-                    if (!startupSuccess) {
+                    if (!startupSuccess && !settled) {
                         if (frpProcess && !frpProcess.killed) {
                             console.log(`隧道 ${tunnel.name} 进程运行中，假设启动成功`);
                             this.activeTunnels.set(tunnel.id, {
@@ -951,9 +1002,9 @@ use_compression = false
                             // 保存隧道状态
                             this.saveTunnelState();
 
-                            resolve({ success: true, message: `隧道 ${tunnel.name} 启动成功` });
+                            resolveOnce({ success: true, message: `隧道 ${tunnel.name} 启动成功` });
                         } else {
-                            reject(new Error(`隧道启动超时${startupError ? ': ' + startupError : ''}`));
+                            rejectOnce(new Error(`隧道启动超时${startupError ? ': ' + startupError : ''}`));
                         }
                     }
                 }, 5000);
@@ -961,7 +1012,7 @@ use_compression = false
 
         } catch (error) {
             console.error('启动单隧道失败:', error);
-            return { success: false, message: error.message };
+            return { success: false, message: error.message, code: error.code };
         }
     }
 
@@ -978,7 +1029,7 @@ use_compression = false
 
         // 尝试从登录信息文件读取
         try {
-            const loginInfoPath = '/app/data/login_info.json';
+            const loginInfoPath = this.loginInfoFile;
             if (fs.existsSync(loginInfoPath)) {
                 const loginInfo = JSON.parse(fs.readFileSync(loginInfoPath, 'utf8'));
                 if (loginInfo.token) {

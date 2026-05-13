@@ -36,6 +36,23 @@ const upstreamAxios = axios.create();
 // 记录程序启动时间
 const SERVER_START_TIME = new Date();
 
+function redactSensitive(value) {
+    const text = typeof value === 'string' ? value : JSON.stringify(value);
+    return text
+        .replace(/(["']?(?:accessToken|refreshToken|usertoken|userToken|token|authorization|password|auth)["']?\s*[:=]\s*)["']?[^"',\s}]+["']?/gi, '$1[REDACTED]')
+        .replace(/((?:accessToken|refreshToken|usertoken|userToken|token)=)[^&\s"']+/gi, '$1[REDACTED]')
+        .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED]')
+        .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[REDACTED]');
+}
+
+function safeJson(value) {
+    try {
+        return redactSensitive(JSON.stringify(value, null, 2));
+    } catch (_) {
+        return '[Unserializable]';
+    }
+}
+
 // 系统验证 - 重要：不要修改此代码块
 const _0x1234 = ['6c696e6c756f', '76312e302e30', '32303235']; // hex encoded
 const _verify = () => {
@@ -396,7 +413,7 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
 
         // 记录发送的请求数据
         if (endpoint === '/update_tunnel' || endpoint === '/create_tunnel') {
-            console.log(`[${new Date().toISOString()}] 发送数据:`, JSON.stringify(config.data, null, 2));
+            console.log(`[${new Date().toISOString()}] 发送数据:`, safeJson(config.data));
             
             // 对于隧道相关API，确保数据类型正确
             if (config.data) {
@@ -419,12 +436,12 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
                     config.data.compression = Boolean(config.data.compression);
                 }
                 
-                console.log(`[${new Date().toISOString()}] 类型转换后的数据:`, JSON.stringify(config.data, null, 2));
+                console.log(`[${new Date().toISOString()}] 类型转换后的数据:`, safeJson(config.data));
             }
         }
 
         const response = await upstreamAxios(config);
-        console.log(`[${new Date().toISOString()}] 响应状态: ${response.status}, 数据: ${JSON.stringify(response.data).substring(0, 100)}...`);
+        console.log(`[${new Date().toISOString()}] 响应状态: ${response.status}, 数据: ${redactSensitive(JSON.stringify(response.data)).substring(0, 100)}...`);
         res.json(response.data);
     } catch (error) {
         console.error('API代理错误:', error.message);
@@ -432,7 +449,7 @@ async function proxyToChmlFrp(req, res, endpoint, method = 'GET', retryCount = 0
         // 记录更详细的错误信息
         if (error.response) {
             console.error('错误响应状态:', error.response.status);
-            console.error('错误响应数据:', error.response.data);
+            console.error('错误响应数据:', redactSensitive(error.response.data));
         }
         
         // 对于超时或服务器错误，尝试重试
@@ -685,7 +702,29 @@ app.get('/api/update_qq', (req, res) => proxyToChmlFrp(req, res, '/update_qq'));
 app.get('/api/update_userimg', (req, res) => proxyToChmlFrp(req, res, '/update_userimg'));
 
 // 3. 消息相关
-app.get('/api/messages', (req, res) => proxyToChmlFrp(req, res, '/messages'));
+app.get('/api/messages', async (req, res) => {
+    try {
+        const response = await proxyToChmlFrpAsync(req, '/messages');
+        res.json(response);
+    } catch (error) {
+        if (error.response?.status === 404) {
+            return res.json({
+                code: 200,
+                state: 'success',
+                msg: '暂无消息',
+                data: []
+            });
+        }
+
+        console.error('获取消息失败:', error.response?.status || error.message);
+        res.status(error.response?.status || 500).json({
+            code: -1,
+            state: 'error',
+            msg: error.response?.data?.msg || '获取消息失败',
+            data: null
+        });
+    }
+});
 
 // 新增：用户账户管理API
 app.get('/api/reset_email', (req, res) => proxyToChmlFrp(req, res, '/reset_email'));
@@ -784,7 +823,7 @@ app.post('/api/delete_tunnel', async (req, res) => {
             });
         }
 
-        console.log('发送到ChmlFrp的请求配置:', JSON.stringify(config, null, 2));
+        console.log('发送到ChmlFrp的请求配置:', safeJson(config));
         
         const response = await upstreamAxios(config);
         res.json(response.data);
@@ -812,8 +851,8 @@ app.post('/api/update_tunnel', async (req, res) => {
         let token = authContext.savedLogin?.usertoken || authContext.savedLogin?.token || null;
         
         console.log(`[${new Date().toISOString()}] 使用的accessToken:`, accessToken ? 'present' : 'missing');
-        console.log(`[${new Date().toISOString()}] 初始legacy token:`, token);
-        console.log(`[${new Date().toISOString()}] 请求体:`, JSON.stringify(req.body, null, 2));
+        console.log(`[${new Date().toISOString()}] 初始legacy token:`, token ? '[REDACTED]' : null);
+        console.log(`[${new Date().toISOString()}] 请求体:`, safeJson(req.body));
 
         if (!accessToken && !token) {
             return res.status(400).json({
@@ -875,7 +914,7 @@ app.post('/api/update_tunnel', async (req, res) => {
             v1Data.dorp = banddomain;
         }
         
-        console.log(`[${new Date().toISOString()}] POST /api/cztunnel.php - 转换后的数据:`, JSON.stringify(v1Data, null, 2));
+        console.log(`[${new Date().toISOString()}] POST /api/cztunnel.php - 转换后的数据:`, safeJson(v1Data));
         
         // 尝试使用正确的API格式
         // 同时在URL上附带 usertoken 与 userid，避免服务端无法读取表单体导致的缺参
@@ -914,7 +953,7 @@ app.post('/api/update_tunnel', async (req, res) => {
             timeout: 45000
         });
         
-        console.log(`[${new Date().toISOString()}] 响应:`, response.data);
+        console.log(`[${new Date().toISOString()}] 响应:`, redactSensitive(response.data));
         
         // 将v1 API响应转换为我们的格式
         if (response.data.code === 200) {
@@ -935,7 +974,7 @@ app.post('/api/update_tunnel', async (req, res) => {
     } catch (error) {
         console.error('隧道更新错误:', error.message);
         if (error.response) {
-            console.error('错误响应:', error.response.data);
+            console.error('错误响应:', redactSensitive(error.response.data));
         }
         
         res.status(500).json({
@@ -1111,7 +1150,7 @@ app.post('/api/frp/update-tunnels', async (req, res) => {
                 data: null
             });
         } else {
-            res.status(500).json({
+            res.status(result.code === 'FRP_BINARY_NOT_FOUND' ? 503 : 500).json({
                 code: -1,
                 state: 'error',
                 msg: result.message,
@@ -1242,7 +1281,7 @@ app.post('/api/frp/clear-state', (req, res) => {
 app.get('/api/frp/recovery-status', (req, res) => {
     try {
 
-        const stateFile = '/app/tunnel-state.json';
+        const stateFile = frpManager.stateFile;
         
         let recoveryInfo = {
             hasState: false,
@@ -1313,7 +1352,7 @@ app.post('/api/frp/start-tunnel', async (req, res) => {
                 }
             });
         } else {
-            res.status(500).json({
+            res.status(result.code === 'FRP_BINARY_NOT_FOUND' ? 503 : 500).json({
                 code: -1,
                 state: 'error',
                 msg: result.message,

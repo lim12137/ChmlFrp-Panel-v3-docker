@@ -341,7 +341,7 @@ const TunnelManagement = () => {
     } catch (error) {
       message.destroy();
       console.error('操作失败:', error);
-      message.error('操作失败，请检查网络连接');
+      message.error(error.response?.data?.msg || '操作失败，请检查网络连接');
     }
   };
 
